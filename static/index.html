@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles/style.css">
+    <title>Document</title>
+    <script src="script.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-wrapper">
+                <h1 class="header-wrapper__text">ФАЙЛОВЫЙ МЕНЕДЖЕР</h1>
+            </div>
+        </div>
+    </header>
+    <main  class="main">
+        <div class="container">
+            <section class="title-wrapper">
+                <div class="title-text">
+                    <h2>Файловая структура</h2>
+                </div>
+            </section>
+            <hr class="div-line">
+            <section class="workspace-wrapper">
+                <div class="workspace">
+                    <div class="list-header">
+                        <div class="list-header-col list-header-col-1">
+                            <button class="sort-button" onclick="sortTable(0)">
+                                Имя
+                            </button>
+                        </div>
+                        <div class="list-header-col list-header-col-2">
+                            <button class="sort-button" onclick="sortTable(0)">
+                                Тип
+                            </button>
+                        </div>
+                        <div class="list-header-col list-header-col-3">
+                            <button class="sort-button" onclick="sortTable(0)">
+                                Размер
+                            </button>
+                        </div>
+                        <div class="list-header-col list-header-col-4">
+                            <button class="sort-button" onclick="sortTable(0)">
+                                Дата изменения
+                            </button>
+                        </div>
+                    </div>
+                    <div class="item-list"></div>                    
+                </div>
+            </section>
+            <hr class="div-line">
+            <section class="buttons-wrapper">
+                <div class="buttons">
+                    <button class="button button-1">Открыть</button>
+                    <button class="button button-2">Закрыть</button>
+                    <button class="button button-3">Редактировать</button>
+                </div>
+            </section>
+        </div>
+    </main>
+    <footer class="footer">
+        <div class="container">
+            <div class="info-wrapper">
+                <div class="info-text">
+                    <p>Все права защищены.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

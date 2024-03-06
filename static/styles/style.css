@@ -1,0 +1,243 @@
+/* БЛОК ОБНУЛЕНИЯ СТИЛЕЙ: */
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+    font-family: Arial, Helvetica, sans-serif;
+	vertical-align: baseline;
+}
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+html {
+	height: 100%;
+}
+body {
+	line-height: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+/* БЛОК ОБНУЛЕНИЯ СТИЛЕЙ ЗАКОНЧИЛСЯ */
+
+.header {
+    display: flex;
+    justify-content: center;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    height: 70px;
+}
+
+.main {
+    display: flex;
+    justify-content: center;
+    flex: 1;
+}
+
+.footer {
+    display: flex;
+    justify-content: center;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    height: 70px;
+}
+
+.container{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 80%;
+}
+
+.div-line {
+    border: none;
+    height: 1px;
+    background-color: #b8b6b6; /* Цвет линии (например, черный) */
+    margin: 0;
+}
+
+@media (max-width: 770px) {
+    .container {
+        max-width: 95%;
+    }
+}
+
+@media (max-width: 990px) {
+    .container {
+        max-width: 90%;
+    }
+}
+
+/* Медиа-запрос для экранов с шириной 1200px и более */
+@media (max-width: 1400px) {
+    .container {
+        max-width: 80%;
+    }
+}
+
+.header-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.header-wrapper__text {
+    display: flex;
+    font-size: 35px;
+    font-weight: 900px;
+}
+
+.title-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 10%;
+    padding: 10px;
+    background-color: #eceff1;
+}
+
+.title-text {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 80%;
+    font-size: 25px;
+}
+
+.workspace-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80%;
+    padding: 10px;
+    background-color: #eceff1;
+}
+
+.workspace {
+    height: 100%;
+    width: 100%;
+}
+
+.list-header {
+    display: grid;
+    align-items: center;
+    justify-content: space-between;
+    height: fit-content;
+    padding: 5px 0px;
+    grid-template-columns: 50% 12% 15% 21%
+}
+
+.list-header-col {
+    display: flex;
+    justify-content: left;
+}
+
+.sort-button {
+    display: flex;
+    justify-content: left;
+    margin: 0;
+    width: 100%;
+    padding: 0;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.sort-button:hover {
+    background-color: #e0e0e0; /* Новый цвет фона при наведении */
+    font-weight: 600;
+}
+
+.item-list {
+    display: flex;
+    cursor: pointer;
+    flex-direction: column;
+}
+
+.buttons-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 10%;
+    padding: 10px;
+    background-color: #eceff1;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 80%;
+}
+
+/* styles.css */
+.button {
+    height: 40px;
+    width: 30%;
+    display: inline-block;
+    background-color: #ffffff; /* Цвет фона кнопки */
+    border: #969494 solid 1px;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: center;
+    color: black;
+    text-decoration: none;
+    font-weight: 900;
+    margin: 10px;
+    transition: background-color 0.3s ease; /* Плавное изменение цвета фона при наведении */
+
+    /* Дополнительные стили по вашему выбору */
+}
+
+/* Дополнительные стили для состояния при наведении */
+.button:hover {
+    background-color: #e0e0e0; /* Новый цвет фона при наведении */
+}
+
+.info-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+}
+
+.info-text {
+    font-size: 14px;
+}
