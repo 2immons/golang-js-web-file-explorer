@@ -1,45 +1,102 @@
 package main
 
-// Через флаг задается корневая директория
-// Выводится список всех вложенных файлов и других директорий в корневой с указанием их размера
-
-// go run . --src="/"
-
 import (
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 )
 
-// processFile() производт обработку каждого файла: выводит его путь и размер в терминал;
-// в случае ошибок доступа к файлу или ошибки получения информации о файле, выводит их на экран.
-func processFile(path string, dir os.DirEntry, err error) error {
-	if err != nil {
-		fmt.Printf("Ошибка доступа по пути: %s. Ошибка: %v\n", path, err)
-		return nil
-	}
-
-	fileInfo, err := dir.Info()
-	if err != nil {
-		fmt.Printf("Ошибка получения информации о файле по пути: %s. Ошибка: %v\n", path, err)
-		return nil
-	}
-
-	fmt.Printf("%s ----- размер: %d байтов\n", path, fileInfo.Size())
-	return nil
-}
-
-// main() считывает с терминала флаг, парсит его и получает корневую директорию,
-// затем использует filePath.Walk() для обхода всех файлов и поддиректорий, начиная с корневой и вызывает для каждого файла processFile()
 func main() {
-	// парсинг флага из терминала
-	srcPath := flag.String("src", "", "Source dir path")
+	start := time.Now()
+	srcPath := flag.String("src", "DEFAULT VALUE", "Путь к корневой папке")
 	flag.Parse()
 
-	// обход всех файлов и поддиректорий
-	err := filepath.WalkDir(*srcPath, processFile)
-	if err != nil {
-		fmt.Println(err)
+	if *srcPath == "DEFAULT VALUE" {
+		fmt.Println("Введите параметры:")
+		flag.VisitAll(func(f *flag.Flag) {
+			fmt.Printf(" --%s - %s\n", f.Name, f.Usage)
+		})
+		os.Exit(1)
 	}
+
+	// // получение абсолютного пути из путя, введенного пользователем
+	// absPath, err := filepath.Abs(*srcPath)
+	// if err != nil {
+	// 	fmt.Println("Ошибка получения абсолютного путя:", err)
+	// 	return
+	// }
+
+	// обход корневой папки
+	err := filepath.Walk(*srcPath, func(currentPath string, info os.FileInfo, err error) error {
+		if err != nil {
+			fmt.Println("Ошибка доступа по пути:", err)
+			return err
+		}
+
+		// исключенние файлов и папок на уровне вложенности ниже 1 относительно корневой папки
+		currentRelPath, err := filepath.Rel(*srcPath, currentPath)
+		if err != nil {
+			fmt.Println("Ошибка получения относительного путя:", err)
+			return err
+		}
+
+		// является ли относительный путь корневым (.) или содержит ли какой-нибудь символ разделителя пути
+		if currentRelPath == "." || strings.Contains(currentRelPath, "\\") || strings.Contains(currentRelPath, "/") {
+			return nil
+		}
+
+		// вывод информации о файле или папке: для папки выполняется дополнительно рассчет ее размера
+		if info.IsDir() {
+			size, err := calculateFolderSize(currentPath)
+			if err != nil {
+				fmt.Println("Ошибка при расчете размера папки:", err)
+				return err
+			}
+			fmt.Printf("ПАПКА | %s  |  размер %s\n", currentRelPath, formatSize(size))
+		} else {
+			fmt.Printf("ФАЙЛ  | %s  |  размер %s\n", currentRelPath, formatSize(info.Size()))
+		}
+		return nil
+	})
+
+	if err != nil {
+		os.Exit(1)
+	}
+
+	duration := time.Since(start)
+	fmt.Println(duration)
+}
+
+// formatSize переводит размер из байт в удобный вид (Кб, Мб)
+func formatSize(size int64) string {
+	const kb = 1024
+	const mb = 1024 * kb
+
+	switch {
+	case size < kb:
+		return fmt.Sprintf("%d байт", size)
+	case size < mb:
+		return fmt.Sprintf("%.2f Кб", float64(size)/float64(kb))
+	default:
+		return fmt.Sprintf("%.2f Мб", float64(size)/float64(mb))
+	}
+}
+
+// calculateFolderSize подсчитывает размер папки, учитывая все вложенные в нее элементы
+func calculateFolderSize(folderPath string) (int64, error) {
+	var size int64
+
+	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		size += info.Size()
+		return nil
+	})
+
+	return size, err
 }
