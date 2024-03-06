@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,15 +23,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// // получение абсолютного пути из путя, введенного пользователем
-	// absPath, err := filepath.Abs(*srcPath)
-	// if err != nil {
-	// 	fmt.Println("Ошибка получения абсолютного путя:", err)
-	// 	return
-	// }
+	// вывод заголовка таблицы результатов
+	err := printHeader(*srcPath)
+	if err != nil {
+		return
+	}
 
 	// обход корневой папки
-	err := filepath.Walk(*srcPath, func(currentPath string, info os.FileInfo, err error) error {
+	err = filepath.Walk(*srcPath, func(currentPath string, fileInfo os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Println("Ошибка доступа по пути:", err)
 			return err
@@ -48,17 +48,12 @@ func main() {
 			return nil
 		}
 
-		// вывод информации о файле или папке: для папки выполняется дополнительно рассчет ее размера
-		if info.IsDir() {
-			size, err := calculateFolderSize(currentPath)
-			if err != nil {
-				fmt.Println("Ошибка при расчете размера папки:", err)
-				return err
-			}
-			fmt.Printf("ПАПКА | %s  |  размер %s\n", currentRelPath, formatSize(size))
-		} else {
-			fmt.Printf("ФАЙЛ  | %s  |  размер %s\n", currentRelPath, formatSize(info.Size()))
+		// печать информации о вложенных в указанную папку элементах (файлы и директории)
+		err = printFileOrDirInfo(currentPath, currentRelPath, fileInfo)
+		if err != nil {
+			return err
 		}
+
 		return nil
 	})
 
@@ -68,6 +63,34 @@ func main() {
 
 	duration := time.Since(start)
 	fmt.Println(duration)
+}
+
+// printHeader печатает абсолютный путь до указанной папки и шапку таблицы под ней
+func printHeader(srcPath string) error {
+	absPath, err := filepath.Abs(srcPath)
+	if err != nil {
+		fmt.Println("Ошибка получения абсолютного путя:", err)
+		return err
+	}
+
+	// вывод шапки таблицы
+	fmt.Printf("%s:\n", absPath)
+	fmt.Printf("\tТИП   | %-25s | РАЗМЕР\n\t-------------------------------------------------\n", "ИМЯ")
+	return nil
+}
+
+// printFileOrDirInfo выводит информацию (файл или директория, название, размер) в терминал
+func printFileOrDirInfo(currentPath, currentRelPath string, fileInfo fs.FileInfo) error {
+	if fileInfo.IsDir() {
+		dirSize, err := calculateFolderSize(currentPath)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("\tПапка | %-25s | %s\n", currentRelPath, formatSize(dirSize))
+	} else {
+		fmt.Printf("\tФайл  | %-25s | %s\n", currentRelPath, formatSize(fileInfo.Size()))
+	}
+	return nil
 }
 
 // formatSize переводит размер из байт в удобный вид (Кб, Мб)
@@ -91,6 +114,7 @@ func calculateFolderSize(folderPath string) (int64, error) {
 
 	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			fmt.Println("Ошибка при расчете размера папки:", err)
 			return err
 		}
 
