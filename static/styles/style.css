@@ -39,6 +39,9 @@ ol, ul {
 blockquote, q {
 	quotes: none;
 }
+button {
+    box-sizing: content-box;
+}
 blockquote:before, blockquote:after,
 q:before, q:after {
 	content: '';
@@ -148,8 +151,58 @@ table {
 }
 
 .workspace {
+    border: 1px solid rgb(145, 145, 145);
     height: 100%;
     width: 100%;
+}
+
+.list-path {
+    display: flex;
+    flex-direction: row;
+    height: fit-content;
+    align-items: center;
+    min-height: 30px;
+    justify-content: space-between;
+    border-bottom: 1px solid rgb(145, 145, 145)
+}
+
+.path {
+    display: flex;
+    height: 100%;
+    padding: 3px 5px;
+}
+
+.path-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 220px;
+    height: 100%;
+    align-items: center;
+}
+
+.path-button {
+    display: flex;
+    border-radius: 10px;
+    justify-content: center;
+    height: 100%;
+    width: 45%;
+    max-width: 90px;
+    background-color: #ffffff; /* Цвет фона кнопки */
+    border: #969494 solid 1px;
+    font-size: 15px;
+    cursor: pointer;
+    color: black;
+    text-decoration: none;
+    font-weight: 700;
+    transition: background-color 0.3s ease; /* Плавное изменение цвета фона при наведении */
+
+    /* Дополнительные стили по вашему выбору */
+}
+
+/* Дополнительные стили для состояния при наведении */
+.path-button:hover {
+    background-color: #e0e0e0; /* Новый цвет фона при наведении */
 }
 
 .list-header {
@@ -157,13 +210,21 @@ table {
     align-items: center;
     justify-content: space-between;
     height: fit-content;
-    padding: 5px 0px;
-    grid-template-columns: 50% 12% 15% 21%
+    min-height: 30px;
+    grid-template-columns: 50% 15% 15% 20%;
+    border-bottom: 1px solid rgb(145, 145, 145);
 }
 
 .list-header-col {
     display: flex;
     justify-content: left;
+    align-items: center;
+    height: 100%;
+    border-right: 1px solid rgb(145, 145, 145);
+}
+
+.list-header-col-4 {
+    border: none
 }
 
 .sort-button {
@@ -171,7 +232,9 @@ table {
     justify-content: left;
     margin: 0;
     width: 100%;
-    padding: 0;
+    padding: 0px 5px;
+    height: 100%;
+    align-items: center;
     font-size: 16px;
     border: none;
     cursor: pointer;
@@ -181,6 +244,10 @@ table {
 .sort-button:hover {
     background-color: #e0e0e0; /* Новый цвет фона при наведении */
     font-weight: 600;
+}
+
+.list-section {
+    padding: 10px 5px
 }
 
 .item-list {
