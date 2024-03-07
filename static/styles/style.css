@@ -51,6 +51,32 @@ table {
 	border-collapse: collapse;
 	border-spacing: 0;
 }
+::-webkit-scrollbar {
+    width: 10px; /* для браузеров на основе WebKit (Chrome, Safari, etc.) */
+  }
+  
+  ::-moz-scrollbar {
+    width: 10px; /* для браузеров на основе Gecko (Firefox) */
+  }
+  
+  ::-webkit-scrollbar-track {
+    background-color: #f1f1f1;
+  }
+  
+  ::-moz-scrollbar-track {
+    background-color: #f1f1f1;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 5px;
+  }
+  
+  ::-moz-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 5px;
+  }
+  
 /* БЛОК ОБНУЛЕНИЯ СТИЛЕЙ ЗАКОНЧИЛСЯ */
 
 .header {
@@ -87,27 +113,34 @@ table {
 .div-line {
     border: none;
     height: 1px;
-    background-color: #b8b6b6; /* Цвет линии (например, черный) */
+    background-color: #b8b6b6;
     margin: 0;
 }
 
 @media (max-width: 770px) {
     .container {
-        max-width: 95%;
+        max-width: 97%;
     }
 }
 
 @media (max-width: 990px) {
     .container {
+        max-width: 95%;
+    }
+}
+
+@media (max-width: 1400px) {
+    .container {
         max-width: 90%;
     }
 }
 
-/* Медиа-запрос для экранов с шириной 1200px и более */
-@media (max-width: 1400px) {
-    .container {
-        max-width: 80%;
-    }
+.error-data-not-found {
+    display: none;
+}
+
+.error-data-not-found-active {
+    display: flex;
 }
 
 .header-wrapper {
@@ -162,14 +195,26 @@ table {
     height: fit-content;
     align-items: center;
     min-height: 30px;
+    margin-right: 10px;
     justify-content: space-between;
     border-bottom: 1px solid rgb(145, 145, 145)
 }
 
 .path {
+    box-sizing: border-box;
+    padding: 5px;
     display: flex;
     height: 100%;
-    padding: 3px 5px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    color: #333;
+    background-color: #f8f8f8;
+    outline: none;
+    width: calc(100% - 220px);
+}
+.path:focus {
+    border-color: #66afe9;
+    box-shadow: 0 0 5px rgba(102, 175, 233, 0.6);
 }
 
 .path-buttons {
@@ -188,21 +233,18 @@ table {
     height: 100%;
     width: 45%;
     max-width: 90px;
-    background-color: #ffffff; /* Цвет фона кнопки */
+    background-color: #ffffff;
     border: #969494 solid 1px;
     font-size: 15px;
     cursor: pointer;
     color: black;
     text-decoration: none;
     font-weight: 700;
-    transition: background-color 0.3s ease; /* Плавное изменение цвета фона при наведении */
-
-    /* Дополнительные стили по вашему выбору */
+    transition: background-color 0.3s ease;
 }
 
-/* Дополнительные стили для состояния при наведении */
 .path-button:hover {
-    background-color: #e0e0e0; /* Новый цвет фона при наведении */
+    background-color: #e0e0e0;
 }
 
 .list-header {
@@ -223,10 +265,6 @@ table {
     border-right: 1px solid rgb(145, 145, 145);
 }
 
-.list-header-col-4 {
-    border: none
-}
-
 .sort-button {
     display: flex;
     justify-content: left;
@@ -238,22 +276,51 @@ table {
     font-size: 16px;
     border: none;
     cursor: pointer;
+    font-weight: 600;
     transition: background-color 0.3s ease;
 }
 
 .sort-button:hover {
-    background-color: #e0e0e0; /* Новый цвет фона при наведении */
-    font-weight: 600;
+    background-color: #e0e0e0
+}
+
+.table-section{
+    overflow-y: scroll;
 }
 
 .list-section {
-    padding: 10px 5px
+    padding: 0px 0px 5px 0px;
+    height: 500px;
 }
 
 .item-list {
-    display: flex;
+    display: grid;
+    align-items: center;
+    justify-content: space-between;
+    height: fit-content;
+    min-height: 30px;
+    grid-template-columns: 50% 15% 15% 20%;
+    border-bottom: 1px solid rgb(145, 145, 145);
+    cursor: not-allowed;
+}
+
+.item-list-folder {
+    transition: background-color 0.3s ease;
     cursor: pointer;
-    flex-direction: column;
+}
+
+.item-list-folder:hover {
+    background-color: #e0e0e0;
+    font-weight: 550;
+}
+
+.item-option {
+    padding: 0px 5px;
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    height: 100%;
+    border-right: 1px solid rgb(145, 145, 145);
 }
 
 .buttons-wrapper {
@@ -272,12 +339,11 @@ table {
     width: 80%;
 }
 
-/* styles.css */
 .button {
     height: 40px;
     width: 30%;
     display: inline-block;
-    background-color: #ffffff; /* Цвет фона кнопки */
+    background-color: #ffffff;
     border: #969494 solid 1px;
     border-radius: 10px;
     font-size: 16px;
@@ -287,14 +353,11 @@ table {
     text-decoration: none;
     font-weight: 900;
     margin: 10px;
-    transition: background-color 0.3s ease; /* Плавное изменение цвета фона при наведении */
-
-    /* Дополнительные стили по вашему выбору */
+    transition: background-color 0.3s ease;
 }
 
-/* Дополнительные стили для состояния при наведении */
 .button:hover {
-    background-color: #e0e0e0; /* Новый цвет фона при наведении */
+    background-color: #e0e0e0;
 }
 
 .info-wrapper {

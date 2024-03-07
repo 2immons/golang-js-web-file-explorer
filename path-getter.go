@@ -1,10 +1,9 @@
 package main
 
 import (
-	"flag"
+	"encoding/json"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,102 +12,186 @@ import (
 	"time"
 )
 
-// структура элементов-путей (файлов и директорий)
+// структура элементов (файлов и директорий)
 type pathItems struct {
-	relPath  string // путь относительно srcPath пользователя
-	itemSize int64  // размер
-	isDir    bool   // является ли директорией
+	RelPath  string
+	ItemSize int64
+	IsDir    bool
+	EditDate time.Time
 }
 
-type Sort string
+// структура элементов (файлов и директорий) переведенные в string формат для отправки на клиент
+type pathItemsForJson struct {
+	RelPath  string `json:"relPath"`
+	ItemSize string `json:"itemSize"`
+	IsDir    string `json:"type"`
+	EditDate string `json:"editDate"`
+}
+
+// структура запроса
+type RequestBody struct {
+	SortParams  map[string]interface{} `json:"sortParams"`
+	CurrentPath string                 `json:"currentPath"`
+}
+
+// ВОПРОС: еще раз нужно объяснить зачем нам эта структура для констант сортировки ?
+// type Sort string
 
 const (
-	ASC  Sort   = "asc"
-	DES  Sort   = "des"
-	PORT string = ":8321"
+	ASC       string = "asc" // константа сортировки
+	DES       string = "des" // константа сортировки
+	PORT      string = ":8321"
+	JSON_PATH string = "db/db.json"
 )
+
+func main() {
+	startServer()
+}
 
 func startServer() {
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/paths", getPaths)
 
-	//http.HandleFunc("/", routeHandler) // сделать роутер?
+	//http.HandleFunc("/", routeHandler) // ВОПРОС: роутер можно реализовать здесь как отдельный handler, который будет пересылать по путям?
 	err := http.ListenAndServe(PORT, nil)
 	if err != nil {
 		fmt.Println(err)
+	} else {
+		fmt.Printf("Сервер запущен на порту %s\n", PORT)
 	}
 }
 
 // getPaths получает по запросу получает информацию из json и отправляет ее на сервер
 func getPaths(w http.ResponseWriter, r *http.Request) {
-	// TODO: замена на postre/mysql ?
-	fileContent, err := ioutil.ReadFile("db/db.json")
-	if err != nil {
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(fileContent)
-}
-
-func main() {
 	start := time.Now()
 
-	startServer()
+	srcPath := r.URL.Query().Get("path")
+	sortOrder := r.URL.Query().Get("sortOrder")
+	sortField := r.URL.Query().Get("sortField")
 
-	srcPath, sortOrder, err := parseFlag()
+	// создание сортированного среза элементов в заданной директории
+	pathsSlice, err := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
 	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	pathsArray := []pathItems{}
+	// создание нового среза элементов в заданной директории для дальнейшей конвертации в JSON формат
+	pathsSliceForJson := createConvertedPathsSliceForJson(pathsSlice)
 
-	// вывод заголовка таблицы результатов
-	err = printHeader(srcPath)
+	// конвертация нового среза в JSON формат и запись его в JSON файл
+	err = convertToJsonAndWriteToJsonFile(pathsSliceForJson)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	// обход корневой папки
+	// чтение обновленного после записи содержимого файла JSON
+	jsonFileContent, err := os.ReadFile(JSON_PATH)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// отправка ответа на сервер с JSON файлом
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonFileContent)
+
+	duration := float64(time.Since(start).Seconds())
+	fmt.Printf("\nДлительность в секундах: %f\n", duration)
+}
+
+// createConvertedPathsSliceForJson создает срез элементов в заданной директории для дальнейшей конвертации в JSON формат
+func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson {
+	pathsSliceForJson := make([]pathItemsForJson, len(pathsSlice))
+
+	for i, v := range pathsSlice {
+		// замена bool на сооветствующее string элементов pathsSlice
+		isDirValue := "Файл"
+		if v.IsDir {
+			isDirValue = "Папка"
+		}
+
+		// присвоение значений новому срезу
+		pathsSliceForJson[i] = pathItemsForJson{
+			RelPath:  v.RelPath,
+			ItemSize: formatSize(v.ItemSize),
+			IsDir:    isDirValue,
+			EditDate: v.EditDate.Format("02.01.2006 15:04"),
+		}
+	}
+
+	return pathsSliceForJson
+}
+
+// createSortedSliceOfPathItems создает сортированный срез элементов в заданной директории
+func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]pathItems, error) {
+	// обход заданной директории
 	dirEntries, err := os.ReadDir(srcPath)
 	if err != nil {
 		fmt.Println("Ошибка доступа по пути:", err)
-		return
+		return nil, err
 	}
 
 	var wg sync.WaitGroup
-	resultCh := make(chan pathItems, len(dirEntries))
+	resultPathsCh := make(chan pathItems, len(dirEntries))
 
-	// обход по найденным вхождениям в корневую папку
+	// обход найденных вхождений в заданную директорию
 	for _, dirEntry := range dirEntries {
 		wg.Add(1)
-		go processDirEntry(srcPath, dirEntry, resultCh, &wg)
+		go processDirEntry(srcPath, dirEntry, resultPathsCh, &wg)
 	}
 
 	// ожидание всех горутин и закрытие канала с их данными
 	wg.Wait()
-	close(resultCh)
+	close(resultPathsCh)
 
-	// добавление в срез pathsArray данных из канала горутин
-	for result := range resultCh {
-		pathsArray = append(pathsArray, result)
+	// срез состоящий из элементов в заданной директории
+	pathsSlice := []pathItems{}
+
+	// добавление в срез pathsSlice данных из канала горутин
+	for resultPath := range resultPathsCh {
+		pathsSlice = append(pathsSlice, resultPath)
 	}
 
-	sortPathsBySize(pathsArray, sortOrder)
+	if sortField == "size" {
+		sortPathsBySize(pathsSlice, sortOrder)
+	} else if sortField == "name" {
+		sortPathsByRelPath(pathsSlice, sortOrder)
+	} else if sortField == "type" {
+		sortPathsByType(pathsSlice, sortOrder)
+	} else if sortField == "date" {
+		sortPathsByEditDate(pathsSlice, sortOrder)
+	}
+	return pathsSlice, nil
+}
 
-	// вывод информации о элементах-путях в терминал
-	for _, pathItem := range pathsArray {
-		err = printFileOrDirInfo(pathItem.relPath, pathItem.itemSize, pathItem.isDir)
-		if err != nil {
-			return
-		}
+// convertToJsonAndWriteToJsonFile конвертирует срез путей в JSON формат и записывает его в JSON файл
+func convertToJsonAndWriteToJsonFile(pathsSliceForJson []pathItemsForJson) error {
+	// конвертация среза в JSON
+	jsonData, err := json.MarshalIndent(pathsSliceForJson, "", "  ")
+	if err != nil {
+		fmt.Println("Ошибка при маршалинге JSON:", err)
+		return err
 	}
 
-	// вывод времени
-	duration := float64(time.Since(start).Seconds())
-	fmt.Printf("\nДлительность в секундах: %f", duration)
+	// запись в файл JSON
+	err = os.WriteFile(JSON_PATH, jsonData, 0644)
+	if err != nil {
+		fmt.Println("Ошибка при записи в файл:", err)
+		return err
+	}
+
+	// закрытие файла JSON после записи
+	file, err := os.Open(JSON_PATH)
+	if err != nil {
+		fmt.Println("Ошибка при открытии файла:", err)
+		return err
+	}
+	defer file.Close()
+	return nil
 }
 
 // processDirEntry получает размер файла или директори и добавляет его в канал данных
@@ -124,7 +207,14 @@ func processDirEntry(srcPath string, dirEntry fs.DirEntry, resultCh chan<- pathI
 		return
 	}
 
-	resultCh <- pathItems{dirEntry.Name(), itemSize, dirEntry.IsDir()}
+	fileInfo, err := dirEntry.Info()
+	if err != nil {
+		return
+	}
+
+	lastModifiedTime := fileInfo.ModTime()
+
+	resultCh <- pathItems{dirEntry.Name(), itemSize, dirEntry.IsDir(), lastModifiedTime}
 }
 
 // getItemSize по заданному пути получает размер файла или папки (папки с помощью calculateFolderSize)
@@ -146,82 +236,69 @@ func getItemSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
 }
 
 // sortParths производит сортировку среза
-func sortPathsBySize(pathsArray []pathItems, sortOrder string) {
+func sortPathsBySize(pathsSlice []pathItems, sortOrder string) {
 	less := func(i, j int) bool {
-		if sortOrder == "asc" {
-			return pathsArray[i].itemSize > pathsArray[j].itemSize
+		if sortOrder == string(ASC) {
+			return pathsSlice[i].ItemSize > pathsSlice[j].ItemSize
 		} else {
-			return pathsArray[i].itemSize < pathsArray[j].itemSize
+			return pathsSlice[i].ItemSize < pathsSlice[j].ItemSize
 		}
 	}
 
-	sort.Slice(pathsArray, less)
+	sort.Slice(pathsSlice, less)
 }
 
-// parseFlag парсит флаги, заданные пользователем в консоли
-func parseFlag() (string, string, error) {
-	var srcPath string
-	flag.StringVar(&srcPath, "src", "DEFAULT VALUE", "путь к корневой папке")
-	var sort string
-	flag.StringVar(&sort, "sort", "asc", "(необязательный) способ сортировки (по возрастанию asc; по убыванию des): по умолчанию 'asc'")
-	flag.Parse()
-
-	// проверка корректности введенных параметров
-	if srcPath == "DEFAULT VALUE" || (sort != string(ASC) && sort != string(DES)) {
-		errMsg := "Ошибка в параметрах. Введите параметры или проверьте корректность их ввода:\n"
-		flag.VisitAll(func(f *flag.Flag) {
-			errMsg += fmt.Sprintf(" --%s - %s\n", f.Name, f.Usage)
-		})
-		fmt.Println(errMsg)
-		return "", "", fmt.Errorf(errMsg)
+func sortPathsByRelPath(pathsSlice []pathItems, sortOrder string) {
+	less := func(i, j int) bool {
+		if sortOrder == string(ASC) {
+			return pathsSlice[i].RelPath < pathsSlice[j].RelPath
+		} else {
+			return pathsSlice[i].RelPath > pathsSlice[j].RelPath
+		}
 	}
 
-	// вывод дополнительной справочной информации
-	fmt.Println("Вы можете использовать параметр --sort - способ сортировки (по возрастанию asc; по убыванию des): по умолчанию 'asc'")
-	if sort == string(ASC) {
-		fmt.Print("СОРТИРОВКА ПО ВОЗРАСТАНИЮ\n\n")
-	} else if sort == string(DES) {
-		fmt.Print("СОРТИРОВКА ПО УБЫВАНИЮ\n\n")
-	}
-
-	return srcPath, sort, nil
+	sort.Slice(pathsSlice, less)
 }
 
-// printHeader печатает абсолютный путь до указанной папки и шапку таблицы под ней
-func printHeader(srcPath string) error {
-	absPath, err := filepath.Abs(srcPath)
-	if err != nil {
-		fmt.Println("Ошибка получения абсолютного путя:", err)
-		return err
+func sortPathsByType(pathsSlice []pathItems, sortOrder string) {
+	less := func(i, j int) bool {
+		if sortOrder == string(ASC) {
+			return pathsSlice[i].IsDir && !pathsSlice[j].IsDir
+		} else {
+			return !pathsSlice[i].IsDir && pathsSlice[j].IsDir
+		}
 	}
 
-	fmt.Printf("%s:\n", absPath)
-	fmt.Printf("\tТИП   | %-25s | РАЗМЕР\n\t-------------------------------------------------\n", "ИМЯ")
-	return nil
+	sort.Slice(pathsSlice, less)
 }
 
-// printFileOrDirInfo выводит информацию (файл или директория, название, размер) в терминал
-func printFileOrDirInfo(relPath string, itemSize int64, isDir bool) error {
-	if isDir {
-		fmt.Printf("\tПапка | %-25s | %s\n", relPath, formatSize(itemSize))
-	} else {
-		fmt.Printf("\tФайл  | %-25s | %s\n", relPath, formatSize(itemSize))
+func sortPathsByEditDate(pathsSlice []pathItems, sortOrder string) {
+	less := func(i, j int) bool {
+		if sortOrder == string(ASC) {
+			return pathsSlice[i].EditDate.Before(pathsSlice[j].EditDate)
+		} else {
+			return pathsSlice[i].EditDate.After(pathsSlice[j].EditDate)
+		}
 	}
-	return nil
+
+	sort.Slice(pathsSlice, less)
 }
 
 // formatSize переводит размер из байт в удобный вид (Кб, Мб)
 func formatSize(size int64) string {
 	const kb = 1024
 	const mb = 1024 * kb
+	const gb = 1024 * mb
 
 	switch {
 	case size < kb:
 		return fmt.Sprintf("%d байт", size)
 	case size < mb:
 		return fmt.Sprintf("%.2f Кб", float64(size)/float64(kb))
-	default:
+	case size < gb:
 		return fmt.Sprintf("%.2f Мб", float64(size)/float64(mb))
+	default:
+		return fmt.Sprintf("%.2f Гб", float64(size)/float64(gb))
 	}
 }
 

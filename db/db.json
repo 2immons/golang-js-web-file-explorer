@@ -1,32 +1,38 @@
 [
-    {
-        "relPath": "1",
-        "itemSize": "2",
-        "isDir": false
-    },
-    {
-        "relPath": "2",
-        "itemSize": "2",
-        "isDir": false
-    },
-    {
-        "relPath": "3",
-        "itemSize": "2",
-        "isDir": false
-    },
-    {
-        "relPath": "4",
-        "itemSize": "2",
-        "isDir": false
-    },
-    {
-        "relPath": "5",
-        "itemSize": "2",
-        "isDir": false
-    },
-    {
-        "relPath": "6",
-        "itemSize": "2",
-        "isDir": false
-    }
+  {
+    "relPath": "5",
+    "itemSize": "2.39 Кб",
+    "type": "Папка",
+    "editDate": "06.03.2024 22:45"
+  },
+  {
+    "relPath": "2",
+    "itemSize": "1.20 Кб",
+    "type": "Папка",
+    "editDate": "06.03.2024 22:46"
+  },
+  {
+    "relPath": "234234 — копия.txt",
+    "itemSize": "0 байт",
+    "type": "Файл",
+    "editDate": "06.03.2024 22:46"
+  },
+  {
+    "relPath": "0",
+    "itemSize": "0 байт",
+    "type": "Папка",
+    "editDate": "06.03.2024 22:47"
+  },
+  {
+    "relPath": "234234.txt",
+    "itemSize": "0 байт",
+    "type": "Файл",
+    "editDate": "06.03.2024 22:46"
+  },
+  {
+    "relPath": "23424",
+    "itemSize": "0 байт",
+    "type": "Папка",
+    "editDate": "07.03.2024 23:52"
+  }
 ]
