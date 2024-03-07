@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,8 +20,44 @@ type pathItems struct {
 	isDir    bool   // является ли директорией
 }
 
+type Sort string
+
+const (
+	ASC  Sort   = "asc"
+	DES  Sort   = "des"
+	PORT string = ":8321"
+)
+
+func startServer() {
+	fs := http.FileServer(http.Dir("./static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.HandleFunc("/paths", getPaths)
+
+	//http.HandleFunc("/", routeHandler) // сделать роутер?
+	err := http.ListenAndServe(PORT, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+// getPaths получает по запросу получает информацию из json и отправляет ее на сервер
+func getPaths(w http.ResponseWriter, r *http.Request) {
+	// TODO: замена на postre/mysql ?
+	fileContent, err := ioutil.ReadFile("db/db.json")
+	if err != nil {
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(fileContent)
+}
+
 func main() {
 	start := time.Now()
+
+	startServer()
+
 	srcPath, sortOrder, err := parseFlag()
 	if err != nil {
 		return
@@ -28,37 +66,37 @@ func main() {
 	pathsArray := []pathItems{}
 
 	// вывод заголовка таблицы результатов
-	err = printHeader(*srcPath)
+	err = printHeader(srcPath)
 	if err != nil {
 		return
 	}
 
 	// обход корневой папки
-	dirEntries, err := os.ReadDir(*srcPath)
+	dirEntries, err := os.ReadDir(srcPath)
 	if err != nil {
 		fmt.Println("Ошибка доступа по пути:", err)
 		return
 	}
 
 	var wg sync.WaitGroup
-	resultCh := make(chan pathItems, len(dirEntries)) // чтобы не передавать в processDirEntry срез pathsArray
+	resultCh := make(chan pathItems, len(dirEntries))
 
 	// обход по найденным вхождениям в корневую папку
 	for _, dirEntry := range dirEntries {
 		wg.Add(1)
-		go processDirEntry(*srcPath, dirEntry, resultCh, &wg)
+		go processDirEntry(srcPath, dirEntry, resultCh, &wg)
 	}
 
 	// ожидание всех горутин и закрытие канала с их данными
 	wg.Wait()
 	close(resultCh)
 
-	// добавление в срез pathsArray данных (элементов-путей) из канала горутин
+	// добавление в срез pathsArray данных из канала горутин
 	for result := range resultCh {
 		pathsArray = append(pathsArray, result)
 	}
 
-	sortPathsBySize(pathsArray, *sortOrder)
+	sortPathsBySize(pathsArray, sortOrder)
 
 	// вывод информации о элементах-путях в терминал
 	for _, pathItem := range pathsArray {
@@ -73,15 +111,12 @@ func main() {
 	fmt.Printf("\nДлительность в секундах: %f", duration)
 }
 
-// processDirEntry проверяет уровень вложенности каждого пути и добавляет в канал данных горутин новый элемент-путь, если проверки пройдены
+// processDirEntry получает размер файла или директори и добавляет его в канал данных
 func processDirEntry(srcPath string, dirEntry fs.DirEntry, resultCh chan<- pathItems, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	// получение путя от корневой директории до текущей папки или файла
 	currentPath := filepath.Join(srcPath, dirEntry.Name())
-
-	// получение относительного путя
-	relPath := dirEntry.Name()
 
 	// получение размера файла или директории по заданному пути
 	itemSize, err := getItemSize(currentPath, dirEntry)
@@ -89,8 +124,7 @@ func processDirEntry(srcPath string, dirEntry fs.DirEntry, resultCh chan<- pathI
 		return
 	}
 
-	// отправка данных о элементе-пути в канал
-	resultCh <- pathItems{relPath, itemSize, dirEntry.IsDir()}
+	resultCh <- pathItems{dirEntry.Name(), itemSize, dirEntry.IsDir()}
 }
 
 // getItemSize по заданному пути получает размер файла или папки (папки с помощью calculateFolderSize)
@@ -125,26 +159,28 @@ func sortPathsBySize(pathsArray []pathItems, sortOrder string) {
 }
 
 // parseFlag парсит флаги, заданные пользователем в консоли
-func parseFlag() (*string, *string, error) {
-	srcPath := flag.String("src", "DEFAULT VALUE", "путь к корневой папке")
-	sort := flag.String("sort", "asc", "(необязательный) способ сортировки (по возрастанию asc; по убыванию des): по умолчанию 'asc'")
+func parseFlag() (string, string, error) {
+	var srcPath string
+	flag.StringVar(&srcPath, "src", "DEFAULT VALUE", "путь к корневой папке")
+	var sort string
+	flag.StringVar(&sort, "sort", "asc", "(необязательный) способ сортировки (по возрастанию asc; по убыванию des): по умолчанию 'asc'")
 	flag.Parse()
 
 	// проверка корректности введенных параметров
-	if *srcPath == "DEFAULT VALUE" || (*sort != "asc" && *sort != "des") {
+	if srcPath == "DEFAULT VALUE" || (sort != string(ASC) && sort != string(DES)) {
 		errMsg := "Ошибка в параметрах. Введите параметры или проверьте корректность их ввода:\n"
 		flag.VisitAll(func(f *flag.Flag) {
 			errMsg += fmt.Sprintf(" --%s - %s\n", f.Name, f.Usage)
 		})
 		fmt.Println(errMsg)
-		return nil, nil, fmt.Errorf(errMsg)
+		return "", "", fmt.Errorf(errMsg)
 	}
 
 	// вывод дополнительной справочной информации
 	fmt.Println("Вы можете использовать параметр --sort - способ сортировки (по возрастанию asc; по убыванию des): по умолчанию 'asc'")
-	if *sort == "asc" {
+	if sort == string(ASC) {
 		fmt.Print("СОРТИРОВКА ПО ВОЗРАСТАНИЮ\n\n")
-	} else if *sort == "des" {
+	} else if sort == string(DES) {
 		fmt.Print("СОРТИРОВКА ПО УБЫВАНИЮ\n\n")
 	}
 
@@ -159,7 +195,6 @@ func printHeader(srcPath string) error {
 		return err
 	}
 
-	// вывод шапки таблицы
 	fmt.Printf("%s:\n", absPath)
 	fmt.Printf("\tТИП   | %-25s | РАЗМЕР\n\t-------------------------------------------------\n", "ИМЯ")
 	return nil

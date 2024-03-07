@@ -1,0 +1,32 @@
+[
+    {
+        "relPath": "1",
+        "itemSize": "2",
+        "isDir": false
+    },
+    {
+        "relPath": "2",
+        "itemSize": "2",
+        "isDir": false
+    },
+    {
+        "relPath": "3",
+        "itemSize": "2",
+        "isDir": false
+    },
+    {
+        "relPath": "4",
+        "itemSize": "2",
+        "isDir": false
+    },
+    {
+        "relPath": "5",
+        "itemSize": "2",
+        "isDir": false
+    },
+    {
+        "relPath": "6",
+        "itemSize": "2",
+        "isDir": false
+    }
+]

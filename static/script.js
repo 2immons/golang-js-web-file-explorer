@@ -37,3 +37,52 @@ function toggleSubList(item) {
     }
 }
 
+var sortParams = {
+    field: 'size',
+    order: 'asc'
+}
+
+function sortTable(sortOrder) {
+    let sortOrder
+    if (sortParams.order == 'asc') {
+        this.sortOrder = 'des'
+    } 
+    else if (sortParams.order == 'des') {
+        this.sortOrder = 'asc'
+    }
+    event.stopPropagation();
+
+    fetch("/sortData", {
+        method: 'POST',
+        headers: {
+            'Content-Type': "application/json"
+        },
+        body: JSON.stringify(sortParams)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data)
+        })
+        .catch(error => console.log(error))
+}
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    let currentPath = "D:/22/11/2/3/4"
+    let pathDiv = document.getElementById('path')
+    pathDiv.innerHTML = currentPath
+
+    fetch("/paths", {
+        method: 'GET',
+        headers: {
+            'Content-Type': "application/json"
+        },
+        body: JSON.stringify(sortParams)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data)
+        })
+        .catch(error => console.log(error))
+});
+
