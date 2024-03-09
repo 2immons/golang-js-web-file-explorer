@@ -28,18 +28,12 @@ type pathItemsForJson struct {
 	EditDate string `json:"editDate"`
 }
 
-// структура запроса
-type RequestBody struct {
-	SortParams  map[string]interface{} `json:"sortParams"`
-	CurrentPath string                 `json:"currentPath"`
-}
-
 // ВОПРОС: еще раз нужно объяснить зачем нам эта структура для констант сортировки ?
 // type Sort string
 
 const (
-	ASC       string = "asc" // константа сортировки
-	DES       string = "des" // константа сортировки
+	ASC       string = "asc" // константа сортировки -> нужен тип Sort?
+	DES       string = "des" // константа сортировки -> нужен тип Sort?
 	PORT      string = ":8321"
 	JSON_PATH string = "db/db.json"
 )
@@ -50,7 +44,7 @@ func main() {
 
 func startServer() {
 	fs := http.FileServer(http.Dir("./static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.Handle("/", http.StripPrefix("/static/", fs))
 	http.HandleFunc("/paths", getPaths)
 
 	//http.HandleFunc("/", routeHandler) // ВОПРОС: роутер можно реализовать здесь как отдельный handler, который будет пересылать по путям?
@@ -107,19 +101,19 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson {
 	pathsSliceForJson := make([]pathItemsForJson, len(pathsSlice))
 
-	for i, v := range pathsSlice {
+	for i, value := range pathsSlice {
 		// замена bool на сооветствующее string элементов pathsSlice
 		isDirValue := "Файл"
-		if v.IsDir {
+		if value.IsDir {
 			isDirValue = "Папка"
 		}
 
 		// присвоение значений новому срезу
 		pathsSliceForJson[i] = pathItemsForJson{
-			RelPath:  v.RelPath,
-			ItemSize: formatSize(v.ItemSize),
+			RelPath:  value.RelPath,
+			ItemSize: formatSize(value.ItemSize),
 			IsDir:    isDirValue,
-			EditDate: v.EditDate.Format("02.01.2006 15:04"),
+			EditDate: value.EditDate.Format("02.01.2006 15:04"),
 		}
 	}
 

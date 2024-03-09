@@ -314,7 +314,7 @@ table {
     font-weight: 550;
 }
 
-.item-option {
+.path-component {
     padding: 0px 5px;
     display: flex;
     justify-content: left;
