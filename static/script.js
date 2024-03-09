@@ -2,6 +2,19 @@ let globalSortOrder = 'asc'
 const defaultPath = 'D:/Git Reps/test'
 let currentPath = 'D:/Git Reps/test'
 
+// загрузка страницы
+document.addEventListener('DOMContentLoaded', function () {
+    let pathInput = document.getElementById('path')
+    pathInput.value = currentPath
+
+    const sortOrder = 'asc';
+    const url = `/paths?sortOrder=${encodeURIComponent(sortOrder)}&path=${encodeURIComponent(currentPath)}`;
+
+    getPaths(url)
+});
+
+
+// setDefaultPath устанавливает значение текущего пути в стандартный defaultPath
 function setDefaultPath() {
     currentPath = defaultPath
     let sortField = 'size'
@@ -11,6 +24,7 @@ function setDefaultPath() {
     pathInput.value = currentPath
 }
 
+// setPreviousPath устанавливает значение текущего пути на 1 уровень выше
 function setPreviousPath() {
     let pathArray = currentPath.split('/');
     pathArray.pop();
@@ -22,6 +36,7 @@ function setPreviousPath() {
     pathInput.value = currentPath
 }
 
+// setPreviousPath устанавливает значение текущего пути в зависимости от директории, в которую пользователь перешел
 function setNewPath(dir) {
     currentPath = currentPath + '/' +dir
     let sortField = 'size'
@@ -31,6 +46,7 @@ function setNewPath(dir) {
     pathInput.value = currentPath
 }
 
+// setPreviousPath устанавливает значение текущего пути заданному в поиске
 function setNewPathByInput() {
     if (event.key === "Enter") {
         let inputValue = document.getElementById("path").value
@@ -45,6 +61,7 @@ function setNewPathByInput() {
     }
 }
 
+// getPaths получает данные с сервера и создает элементы на странице
 function getPaths(url) {
     fetch(url, {
         method: 'GET',
@@ -60,13 +77,12 @@ function getPaths(url) {
                 }
                 let errorDiv = document.querySelector('.error-data-not-found')
                 errorDiv.classList.add('error-data-not-found-active')
-                return
+                return         // TODO: почем когд продолжается дальше?
             }
             let errorDiv = document.querySelector('.error-data-not-found')
             errorDiv.classList.remove('error-data-not-found-active')
             return response.json();
         })
-        // почему он идет дальше?
         .then(data => {
             let itemList = document.querySelector('.list-section');
 
@@ -107,6 +123,7 @@ function getPaths(url) {
         });
 }
 
+// sortTable обрабатывает нажатие кнопки сортировки (определяет порядок)
 function sortTable(sortField) {
     let sortOrder
     if (globalSortOrder === "asc") {
@@ -119,14 +136,4 @@ function sortTable(sortField) {
     const url = `/paths?sortField=${encodeURIComponent(sortField)}&sortOrder=${encodeURIComponent(sortOrder)}&path=${encodeURIComponent(currentPath)}`;
     getPaths(url)
 }
-
-document.addEventListener('DOMContentLoaded', function () {
-    let pathInput = document.getElementById('path')
-    pathInput.value = currentPath
-
-    const sortOrder = 'asc';
-    const url = `/paths?sortOrder=${encodeURIComponent(sortOrder)}&path=${encodeURIComponent(currentPath)}`;
-
-    getPaths(url)
-});
 
