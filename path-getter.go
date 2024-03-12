@@ -33,100 +33,114 @@ type Config struct {
 }
 
 type ResponseStruct struct {
-	Status    bool        `json:"status"`    // булевое значение верной отработки запроса
-	ErrorText string      `json:"errorText"` // текст ошибки, если она есть
-	Data      interface{} `json:"data"`      // поле с данными, передаваемыми в запросе
-	LoadTime  float64     `json:"loadTime"`  // время отработки сервера
+	Status    bool        `json:"serverStatus"`    // булевое значение верной отработки запроса
+	ErrorText string      `json:"serverErrorText"` // текст ошибки, если она есть
+	Data      interface{} `json:"serverData"`      // поле с данными, передаваемыми в запросе
+	LoadTime  float64     `json:"loadTime"`        // время отработки сервера
 }
 
 type Sort string
 
 const (
-	asc            string = "asc"         // по возрастанию сортировка
-	des            string = "des"         // по убыванию сортировка
+	asc            Sort   = "asc"         // по возрастанию сортировка
+	desc           Sort   = "desc"        // по убыванию сортировка
 	configFilePath string = "config.json" // путь к файлу конфигураци
 )
 
 func main() {
-	configFileContent, err := os.ReadFile(configFilePath)
+	// получение конфигурационных данных из файла
+	config, err := getConfig(configFilePath)
 	if err != nil {
-		fmt.Println("Error config", err)
+		fmt.Println("Error config:", err)
 		return
 	}
-
-	var config Config
-
-	err = json.Unmarshal(configFileContent, &config)
-	if err != nil {
-		fmt.Println("Error config", err)
-		return
-	}
-
-	adress := ":" + config.Port
 
 	http.Handle("/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	http.HandleFunc("/paths", getPaths)
 
 	//http.HandleFunc("/", routeHandler) // ВОПРОС: роутер можно реализовать здесь как отдельный handler, который будет пересылать по путям?
 
-	err = http.ListenAndServe(adress, nil)
-	if err != nil {
+	adress := ":" + config.Port
+
+	fmt.Printf("Starting server at http://localhost:%s ...\n", config.Port)
+	if err := http.ListenAndServe(adress, nil); err != nil {
 		fmt.Println(err)
-	} else {
-		fmt.Printf("Сервер запущен на порту %s\n", config.Port)
 	}
 }
 
+// getConfig получает кофигурационные данные из соответствующего файла и возвращает их
+func getConfig(configFilePath string) (Config, error) {
+	var config Config
+	configFileContent, err := os.ReadFile(configFilePath)
+	if err != nil {
+		return config, err
+	}
+
+	err = json.Unmarshal(configFileContent, &config)
+	if err != nil {
+		return config, err
+	}
+
+	return config, nil
+}
+
+// getRequestParams получает параметры из запроса: путь корневой папки, поле сортировки, порядок сортировки
 func getRequestParams(r *http.Request) (string, string, string) {
 	srcPath := r.URL.Query().Get("path")
-	sortOrder := r.URL.Query().Get("sortOrder")
 	sortField := r.URL.Query().Get("sortField")
+	sortOrder := r.URL.Query().Get("sortOrder")
 	return srcPath, sortField, sortOrder
 }
 
-// getPaths получает по запросу получает информацию из json и отправляет ее на сервер
+// getPaths совершает обход директорий по указанному в запросе пути,
+// получает информацию (имя, размер, тип: файл или папка и дата модификации) о каждом входящем в указанную директорию элементе (папке или файле)
+// и отправляет её в формате JSON
 func getPaths(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
+	response := ResponseStruct{
+		Status:    true,
+		ErrorText: "",
+		Data:      "",
+		LoadTime:  0,
+	}
 
-	srcPath, sortOrder, sortField := getRequestParams(r)
+	// получение параметров из запроса
+	srcPath, sortField, sortOrder := getRequestParams(r)
 
 	// создание сортированного среза элементов в заданной директории
 	pathsSlice, err := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusOK)
+		response.ErrorText = fmt.Sprintf("Ошибка при создании сортированного среза данных: %v", err)
+		response.Status = false
+		duration := float64(time.Since(startTime).Seconds())
+		response.LoadTime = duration
+		response.Data = "No data"
 		return
 	}
 
 	// создание нового среза элементов в заданной директории для дальнейшей конвертации в JSON формат
 	pathsSliceForJson := createConvertedPathsSliceForJson(pathsSlice)
 
-	// конвертация нового среза в JSON формат и запись его в JSON файл
-	// pathsSliceJson, err := convertSliceToJsonFormat(pathsSliceForJson)
-	// if err != nil {
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	return
-	// }
-
+	// расчет времени выполнения работы функции
 	duration := float64(time.Since(startTime).Seconds())
 
-	response := ResponseStruct{
-		Status:    true,
-		ErrorText: "",
-		Data:      pathsSliceForJson,
-		LoadTime:  duration,
-	}
+	// составление ответа на клиент
+	response.Data = pathsSliceForJson
+	response.LoadTime = duration
 
-	jsonResponse, err := json.Marshal(response)
+	// конвертация ответа на клиент в JSON формат
+	responseJsonFormat, err := json.Marshal(response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		// как тут показывать ошибку?
 		return
 	}
 
-	// отправка ответа на сервер с JSON файлом
+	// отправка ответа на клиент
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonResponse)
-	// w.Write(jsonResponse)
+	w.Write(responseJsonFormat)
 }
 
 // createConvertedPathsSliceForJson создает срез элементов в заданной директории для дальнейшей конвертации в JSON формат
@@ -157,31 +171,27 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 	// обход заданной директории
 	dirEntries, err := os.ReadDir(srcPath)
 	if err != nil {
-		fmt.Println("Ошибка доступа по пути:", err)
 		return nil, err
 	}
 
 	var wg sync.WaitGroup
-	resultPathsCh := make(chan pathItems, len(dirEntries))
-
-	// обход найденных вхождений в заданную директорию
-	for _, dirEntry := range dirEntries {
-		wg.Add(1)
-		go processDirEntry(srcPath, dirEntry, resultPathsCh, &wg)
-	}
-
-	// ожидание всех горутин и закрытие канала с их данными
-	wg.Wait()
-	close(resultPathsCh)
 
 	// срез состоящий из элементов в заданной директории
 	pathsSlice := []pathItems{}
 
-	// добавление в срез pathsSlice данных из канала горутин
-	for resultPath := range resultPathsCh {
-		pathsSlice = append(pathsSlice, resultPath)
+	// получение информации о каждой директории (имя, размер, тип, время модификации) и запись в срез pathsSlice
+	for _, dirEntry := range dirEntries {
+		wg.Add(1)
+		go func(dirEntry os.DirEntry) {
+			getDirEntryInfoAndWriteToSlice(srcPath, dirEntry, &pathsSlice)
+			wg.Done()
+		}(dirEntry)
 	}
 
+	// ожидание всех горутин обхода
+	wg.Wait()
+
+	// вызов функций сортировки среза pathSlice в зависимости от поля сортировки
 	if sortField == "size" {
 		sortPathsBySize(pathsSlice, sortOrder)
 	} else if sortField == "name" {
@@ -194,15 +204,16 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 	return pathsSlice, nil
 }
 
-// processDirEntry получает размер файла или директори и добавляет его в канал данных
-func processDirEntry(srcPath string, dirEntry fs.DirEntry, resultCh chan<- pathItems, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+// getDirEntryInfoAndWriteToSlice получает имя, размер, тип (файл или директория) и последнее время редактирования директории,
+// после чего добавляет эту информацию в срез pathSlice
+func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice *[]pathItems) {
+	var mu sync.Mutex
+	mu.Lock()
 	// получение путя от корневой директории до текущей папки или файла
 	currentPath := filepath.Join(srcPath, dirEntry.Name())
 
 	// получение размера файла или директории по заданному пути
-	itemSize, err := getItemSize(currentPath, dirEntry)
+	itemSize, err := getDirSize(currentPath, dirEntry)
 	if err != nil {
 		return
 	}
@@ -214,11 +225,14 @@ func processDirEntry(srcPath string, dirEntry fs.DirEntry, resultCh chan<- pathI
 
 	lastModifiedTime := fileInfo.ModTime()
 
-	resultCh <- pathItems{dirEntry.Name(), itemSize, dirEntry.IsDir(), lastModifiedTime}
+	*pathsSlice = append(*pathsSlice, pathItems{dirEntry.Name(), itemSize, dirEntry.IsDir(), lastModifiedTime})
+	mu.Unlock()
 }
 
-// getItemSize по заданному пути получает размер файла или папки (папки с помощью calculateFolderSize)
-func getItemSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
+// getDirSize по заданному пути получает размер директории (файла или папки)
+func getDirSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
+
+	// вызов calculateFolderSize(), если путь является папкой
 	if dirEntry.IsDir() {
 		itemSize, err := calculateFolderSize(currentPath)
 		if err != nil {
@@ -308,7 +322,6 @@ func calculateFolderSize(folderPath string) (int64, error) {
 
 	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Println("Ошибка при расчете размера папки:", err)
 			return err
 		}
 

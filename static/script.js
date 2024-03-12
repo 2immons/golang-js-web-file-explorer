@@ -1,5 +1,5 @@
 const ASC = 'asc'
-const DES = 'des'
+const DESC = 'desc'
 
 const defaultSortOrder = ASC
 const defaultSortField = 'size'
@@ -130,7 +130,7 @@ function getPaths(url) {
 
 // sortTable обрабатывает нажатие кнопки сортировки (определяет порядок)
 function sortTable(sortField) {
-    const sortOrder = globalSortOrder === ASC ? (globalSortOrder = DES) : (globalSortOrder = ASC)
+    const sortOrder = globalSortOrder === ASC ? (globalSortOrder = DESC) : (globalSortOrder = ASC)
     const url = `/paths?sortField=${encodeURIComponent(sortField)}&sortOrder=${encodeURIComponent(sortOrder)}&path=${encodeURIComponent(currentPath)}`
     getPaths(url)
 };
