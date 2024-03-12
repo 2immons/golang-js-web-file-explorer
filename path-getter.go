@@ -14,55 +14,81 @@ import (
 
 // структура элементов (файлов и директорий)
 type pathItems struct {
-	RelPath  string
-	ItemSize int64
-	IsDir    bool
-	EditDate time.Time
+	RelPath  string    // относительный путь к элементу (папке или директор) по отношению к заданной пользователем
+	ItemSize int64     // размер элемента
+	IsDir    bool      // является ли элемент директорией
+	EditDate time.Time // дата время последнего изменения
 }
 
 // структура элементов (файлов и директорий) переведенные в string формат для отправки на клиент
 type pathItemsForJson struct {
-	RelPath  string `json:"relPath"`
-	ItemSize string `json:"itemSize"`
-	IsDir    string `json:"type"`
-	EditDate string `json:"editDate"`
+	RelPath  string `json:"relPath"`  // относительный путь к элементу (папке или директор) по отношению к заданной пользователем
+	ItemSize string `json:"itemSize"` // размер элемента
+	IsDir    string `json:"type"`     // является ли элемент директорией
+	EditDate string `json:"editDate"` // дата время последнего изменения
 }
 
-// ВОПРОС: еще раз нужно объяснить зачем нам эта структура для констант сортировки ?
-// type Sort string
+type Config struct {
+	Port string `json:"port"` // порт сервера
+}
+
+type ResponseStruct struct {
+	Status    bool        `json:"status"`    // булевое значение верной отработки запроса
+	ErrorText string      `json:"errorText"` // текст ошибки, если она есть
+	Data      interface{} `json:"data"`      // поле с данными, передаваемыми в запросе
+	LoadTime  float64     `json:"loadTime"`  // время отработки сервера
+}
+
+type Sort string
 
 const (
-	ASC       string = "asc" // константа сортировки -> нужен тип Sort?
-	DES       string = "des" // константа сортировки -> нужен тип Sort?
-	PORT      string = ":8321"
-	JSON_PATH string = "db/db.json"
+	asc            string = "asc"         // по возрастанию сортировка
+	des            string = "des"         // по убыванию сортировка
+	configFilePath string = "config.json" // путь к файлу конфигураци
 )
 
 func main() {
-	startServer()
-}
+	configFileContent, err := os.ReadFile(configFilePath)
+	if err != nil {
+		fmt.Println("Error config", err)
+		return
+	}
 
-func startServer() {
-	fs := http.FileServer(http.Dir("./static"))
-	http.Handle("/", http.StripPrefix("/static/", fs))
+	var config Config
+
+	err = json.Unmarshal(configFileContent, &config)
+	if err != nil {
+		fmt.Println("Error config", err)
+		return
+	}
+
+	adress := ":" + config.Port
+
+	http.Handle("/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	http.HandleFunc("/paths", getPaths)
 
 	//http.HandleFunc("/", routeHandler) // ВОПРОС: роутер можно реализовать здесь как отдельный handler, который будет пересылать по путям?
-	err := http.ListenAndServe(PORT, nil)
+
+	err = http.ListenAndServe(adress, nil)
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Printf("Сервер запущен на порту %s\n", PORT)
+		fmt.Printf("Сервер запущен на порту %s\n", config.Port)
 	}
+}
+
+func getRequestParams(r *http.Request) (string, string, string) {
+	srcPath := r.URL.Query().Get("path")
+	sortOrder := r.URL.Query().Get("sortOrder")
+	sortField := r.URL.Query().Get("sortField")
+	return srcPath, sortField, sortOrder
 }
 
 // getPaths получает по запросу получает информацию из json и отправляет ее на сервер
 func getPaths(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
+	startTime := time.Now()
 
-	srcPath := r.URL.Query().Get("path")
-	sortOrder := r.URL.Query().Get("sortOrder")
-	sortField := r.URL.Query().Get("sortField")
+	srcPath, sortOrder, sortField := getRequestParams(r)
 
 	// создание сортированного среза элементов в заданной директории
 	pathsSlice, err := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
@@ -75,14 +101,22 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	pathsSliceForJson := createConvertedPathsSliceForJson(pathsSlice)
 
 	// конвертация нового среза в JSON формат и запись его в JSON файл
-	err = convertToJsonAndWriteToJsonFile(pathsSliceForJson)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	// pathsSliceJson, err := convertSliceToJsonFormat(pathsSliceForJson)
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	return
+	// }
+
+	duration := float64(time.Since(startTime).Seconds())
+
+	response := ResponseStruct{
+		Status:    true,
+		ErrorText: "",
+		Data:      pathsSliceForJson,
+		LoadTime:  duration,
 	}
 
-	// чтение обновленного после записи содержимого файла JSON
-	jsonFileContent, err := os.ReadFile(JSON_PATH)
+	jsonResponse, err := json.Marshal(response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -91,10 +125,8 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	// отправка ответа на сервер с JSON файлом
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonFileContent)
-
-	duration := float64(time.Since(start).Seconds())
-	fmt.Printf("\nДлительность в секундах: %f\n", duration)
+	w.Write(jsonResponse)
+	// w.Write(jsonResponse)
 }
 
 // createConvertedPathsSliceForJson создает срез элементов в заданной директории для дальнейшей конвертации в JSON формат
@@ -162,32 +194,6 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 	return pathsSlice, nil
 }
 
-// convertToJsonAndWriteToJsonFile конвертирует срез путей в JSON формат и записывает его в JSON файл
-func convertToJsonAndWriteToJsonFile(pathsSliceForJson []pathItemsForJson) error {
-	// конвертация среза в JSON
-	jsonData, err := json.MarshalIndent(pathsSliceForJson, "", "  ")
-	if err != nil {
-		fmt.Println("Ошибка при маршалинге JSON:", err)
-		return err
-	}
-
-	// запись в файл JSON
-	err = os.WriteFile(JSON_PATH, jsonData, 0644)
-	if err != nil {
-		fmt.Println("Ошибка при записи в файл:", err)
-		return err
-	}
-
-	// закрытие файла JSON после записи
-	file, err := os.Open(JSON_PATH)
-	if err != nil {
-		fmt.Println("Ошибка при открытии файла:", err)
-		return err
-	}
-	defer file.Close()
-	return nil
-}
-
 // processDirEntry получает размер файла или директори и добавляет его в канал данных
 func processDirEntry(srcPath string, dirEntry fs.DirEntry, resultCh chan<- pathItems, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -232,7 +238,7 @@ func getItemSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
 // sortParths производит сортировку среза
 func sortPathsBySize(pathsSlice []pathItems, sortOrder string) {
 	less := func(i, j int) bool {
-		if sortOrder == string(ASC) {
+		if sortOrder == string(asc) {
 			return pathsSlice[i].ItemSize > pathsSlice[j].ItemSize
 		} else {
 			return pathsSlice[i].ItemSize < pathsSlice[j].ItemSize
@@ -244,7 +250,7 @@ func sortPathsBySize(pathsSlice []pathItems, sortOrder string) {
 
 func sortPathsByRelPath(pathsSlice []pathItems, sortOrder string) {
 	less := func(i, j int) bool {
-		if sortOrder == string(ASC) {
+		if sortOrder == string(asc) {
 			return pathsSlice[i].RelPath < pathsSlice[j].RelPath
 		} else {
 			return pathsSlice[i].RelPath > pathsSlice[j].RelPath
@@ -256,7 +262,7 @@ func sortPathsByRelPath(pathsSlice []pathItems, sortOrder string) {
 
 func sortPathsByType(pathsSlice []pathItems, sortOrder string) {
 	less := func(i, j int) bool {
-		if sortOrder == string(ASC) {
+		if sortOrder == string(asc) {
 			return pathsSlice[i].IsDir && !pathsSlice[j].IsDir
 		} else {
 			return !pathsSlice[i].IsDir && pathsSlice[j].IsDir
@@ -268,7 +274,7 @@ func sortPathsByType(pathsSlice []pathItems, sortOrder string) {
 
 func sortPathsByEditDate(pathsSlice []pathItems, sortOrder string) {
 	less := func(i, j int) bool {
-		if sortOrder == string(ASC) {
+		if sortOrder == string(asc) {
 			return pathsSlice[i].EditDate.Before(pathsSlice[j].EditDate)
 		} else {
 			return pathsSlice[i].EditDate.After(pathsSlice[j].EditDate)

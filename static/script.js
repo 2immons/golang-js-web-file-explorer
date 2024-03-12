@@ -85,29 +85,32 @@ function getPaths(url) {
             errorDiv.classList.remove('error-data-not-found-active')
             return response.json()
         })
-        .then(responseData => {
+        .then(response => {
+            console.log(response)
+            document.querySelector('.time').innerText = `Загружено за: ${response.loadTime} секунд`
+
             let pathList = document.querySelector('.list-section')
 
             while (pathList.firstChild) {
                 pathList.removeChild(pathList.firstChild)
             }
 
-            for (let i = 0; i < responseData.length; i++) {
+            for (let i = 0; i < response.data.length; i++) {
                 let newPath = document.createElement('div')
                 newPath.classList.add('item-list')
-                if (responseData[i].type == "Папка" && responseData[i].itemSize[0] !== "0") {
+                if (response.data[i].type == "Папка" && response.data[i].itemSize[0] !== "0") {
                     newPath.classList.add('item-list-folder')
                     
                     newPath.onclick = function () {
-                        setNewPath(responseData[i].relPath)
+                        setNewPath(response.data[i].relPath)
                     }
                 }
 
                 const pathComponents = [
-                    { text: responseData[i].relPath, class: 'path-component' },
-                    { text: responseData[i].type, class: 'path-component' },
-                    { text: responseData[i].itemSize, class: 'path-component' },
-                    { text: responseData[i].editDate, class: 'path-component' }
+                    { text: response.data[i].relPath, class: 'path-component' },
+                    { text: response.data[i].type, class: 'path-component' },
+                    { text: response.data[i].itemSize, class: 'path-component' },
+                    { text: response.data[i].editDate, class: 'path-component' }
                 ]
 
                 pathComponents.forEach(element => {
