@@ -245,10 +245,15 @@ table {
     background-color: #e0e0e0;
 }
 
+.table-section{
+    overflow-y: scroll;
+}
+
 .table-section__header {
     display: grid;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
     height: fit-content;
     min-height: 30px;
     grid-template-columns: 50% 15% 15% 20%;
@@ -282,10 +287,6 @@ table {
     background-color: #e0e0e0
 }
 
-.table-section{
-    overflow-y: scroll;
-}
-
 .path-list-section {
     padding: 0px 0px 5px 0px;
     height: 500px;
@@ -293,12 +294,34 @@ table {
 
 .error-data-not-found {
     display: none;
+    height: fit-content;
+    width: fit-content;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin: auto;
+    justify-content: center;
+    align-items: center;
+    font-size: 35px;
+    font-weight: 900;
 }
 
-.error-data-not-found-active {
-    display: flex;
-    padding: 0px 0px 5px 0px;
-    height: 500px;
+.loading-data {
+    display: none;
+    height: fit-content;
+    width: fit-content;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin: auto;
+    justify-content: center;
+    align-items: center;
+    font-size: 35px;
+    font-weight: 900;
 }
 
 .path-list__item {

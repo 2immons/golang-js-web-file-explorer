@@ -11,6 +11,14 @@ import (
 
 // createSortedSliceOfPathItems создает сортированный срез элементов в заданной директории
 func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]pathItems, error) {
+	if srcPath == "" {
+		currentDir, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		srcPath = filepath.Join(filepath.VolumeName(filepath.Clean(currentDir)), "/")
+	}
+
 	// обход заданной директории
 	dirEntries, err := os.ReadDir(srcPath)
 	if err != nil {
@@ -61,7 +69,7 @@ func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson
 
 		// присвоение значений новому срезу
 		pathsSliceForJson[i] = pathItemsForJson{
-			RelPath:  value.RelPath,
+			Path:     value.Path,
 			ItemSize: formatSize(value.ItemSize),
 			IsDir:    isDirValue,
 			EditDate: value.EditDate.Format("02.01.2006 15:04"),
@@ -89,9 +97,10 @@ func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsS
 	}
 
 	lastModifiedTime := fileInfo.ModTime()
+	absoluteDirPath := filepath.Join(srcPath, dirEntry.Name())
 
 	// вставка данных в срез по индексу
-	(pathsSlice)[index] = pathItems{dirEntry.Name(), itemSize, dirEntry.IsDir(), lastModifiedTime}
+	(pathsSlice)[index] = pathItems{absoluteDirPath, itemSize, dirEntry.IsDir(), lastModifiedTime}
 }
 
 // getDirSize по заданному пути получает размер директории (файла или папки)
@@ -130,9 +139,9 @@ func sortPathsBySize(pathsSlice []pathItems, sortOrder string) {
 func sortPathsByRelPath(pathsSlice []pathItems, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
-			return pathsSlice[i].RelPath < pathsSlice[j].RelPath
+			return pathsSlice[i].Path < pathsSlice[j].Path
 		} else {
-			return pathsSlice[i].RelPath > pathsSlice[j].RelPath
+			return pathsSlice[i].Path > pathsSlice[j].Path
 		}
 	}
 

@@ -7,14 +7,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"runtime"
 	"time"
 )
 
 // структура элементов (файлов и директорий)
 type pathItems struct {
-	RelPath  string    // относительный путь к элементу (папке или директор) по отношению к заданной пользователем
+	Path     string    // путь к элементу (папке или директор)
 	ItemSize int64     // размер элемента
 	IsDir    bool      // является ли элемент директорией
 	EditDate time.Time // дата время последнего изменения
@@ -22,7 +20,7 @@ type pathItems struct {
 
 // структура элементов (файлов и директорий) переведенные в string формат для отправки на клиент
 type pathItemsForJson struct {
-	RelPath  string `json:"relPath"`  // относительный путь к элементу (папке или директор) по отношению к заданной пользователем
+	Path     string `json:"path"`     // путь к элементу (папке или директор)
 	ItemSize string `json:"itemSize"` // размер элемента
 	IsDir    string `json:"type"`     // является ли элемент директорией
 	EditDate string `json:"editDate"` // дата время последнего изменения
@@ -83,7 +81,6 @@ func main() {
 
 	http.Handle("/", http.StripPrefix("/static/", http.FileServer(staticFilesDir)))
 	http.HandleFunc("/paths", getPaths)
-	http.HandleFunc("/user-info", getUserInfo)
 
 	// горутина запуска сервера
 	go func() {
@@ -189,54 +186,4 @@ func getRequestParams(r *http.Request) (string, string, string) {
 	sortField := r.URL.Query().Get("sortField")
 	sortOrder := r.URL.Query().Get("sortOrder")
 	return srcPath, sortField, sortOrder
-}
-
-func getUserInfo(w http.ResponseWriter, r *http.Request) {
-	startTime := time.Now()
-	currentDir, err := os.Getwd()
-	if err != nil {
-		duration := float64(time.Since(startTime).Seconds())
-		response := ResponseStruct{
-			IsSucceed: false,
-			ErrorText: fmt.Sprintf("Ошибка при получении директории: %v", err),
-			Data:      "No data",
-			LoadTime:  duration,
-		}
-		responseJsonFormat, err := json.Marshal(response)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			// как тут показывать ошибку?
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(responseJsonFormat)
-		return
-	}
-
-	rootDir := filepath.VolumeName(filepath.Clean(currentDir))
-	duration := float64(time.Since(startTime).Seconds())
-
-	response := ResponseStruct{
-		IsSucceed: true,
-		ErrorText: "",
-		Data: map[string]interface{}{
-			"os":      runtime.GOOS,
-			"rootDir": rootDir,
-		},
-		LoadTime: duration,
-	}
-
-	// конвертация ответа на клиент в JSON формат
-	responseJsonFormat, err := json.Marshal(response)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		// как тут показывать ошибку?
-		return
-	}
-
-	// отправка ответа на клиент
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(responseJsonFormat)
 }
