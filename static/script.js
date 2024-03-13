@@ -74,7 +74,6 @@ function getPaths(url) {
         }
     })
     .then(response => {
-        console.log(url)
         let errorDiv = document.querySelector('.error-data-not-found')
         if (!response.ok) {
             // удаление всех ранее отрисованных путей (потомков списка)
@@ -180,7 +179,7 @@ function setPreviousPath() {
     if (os === WINDOWS && pathArray.length < 2) {
         return
     } 
-    else if (os === LINUX && pathArray.length < 2) {
+    else if (os === LINUX && pathArray.length <= 2) {
         currentPath = "/"
         const url = `/paths?sortField=${encodeURIComponent(defaultSortField)}&sortOrder=${encodeURIComponent(defaultSortOrder)}&path=${encodeURIComponent(currentPath)}`
         getPaths(url)
@@ -198,7 +197,12 @@ function setPreviousPath() {
 
 // setPreviousPath устанавливает значение текущего пути в зависимости от директории, в которую пользователь перешел
 function setNewPath(dir) {
-    currentPath = currentPath + '/' +dir
+    if (currentPath == "/") {
+        currentPath += dir
+    } else {
+        currentPath = currentPath + '/' +dir
+    }
+    
     const url = `/paths?sortField=${encodeURIComponent(defaultSortField)}&sortOrder=${encodeURIComponent(defaultSortOrder)}&path=${encodeURIComponent(currentPath)}`
     getPaths(url)
     let pathInput = document.getElementById('path')
