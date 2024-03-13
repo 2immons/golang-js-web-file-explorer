@@ -27,27 +27,35 @@ function getPaths(url) {
         }
     })
     .then(response => {
+        // нахождение элемента, отобращающий ошибки
         let errorDiv = document.querySelector('.error-data-not-found')
         if (!response.ok) {
+            // удаление всех ранее отрисованных путей (потомков списка)
             let itemList = document.querySelector('.list-section')
             while (itemList.firstChild) {
                 itemList.removeChild(itemList.firstChild)
             }
+            // вывод ошибки
             errorDiv.classList.add('error-data-not-found-active')
             throw new Error('Ошибка запроса')
         }
+        // сокрытие ошибки
         errorDiv.classList.remove('error-data-not-found-active')
         return response.json()
     })
     .then(data => {
         console.log(data)
+        // если статус с сервера не удовлетворительный, то вывод ошибки
         if (data.serverStatus == false) {
             console.log(data.serverErrorText)
             let errorDiv = document.querySelector('.error-data-not-found')
             errorDiv.classList.add('error-data-not-found-active')
+            throw new Error('Ошибка запроса')
         }
+        // вывод времени
         document.querySelector('.time').innerText = `Загружено за: ${data.loadTime} секунд`
 
+        // вызов функции отрисовки путей
         createNewElements(data.serverData)
     })
     .catch(error => {
@@ -55,6 +63,7 @@ function getPaths(url) {
     })
 };
 
+// createNewElements отрисовывает полученные с сервера пути в качестве потомков списка
 function createNewElements(data) {
     let pathList = document.querySelector('.list-section')
 
@@ -63,8 +72,11 @@ function createNewElements(data) {
         }
 
         for (let i = 0; i < data.length; i++) {
+            // создаем элемент нового пути
             let newPath = document.createElement('div')
             newPath.classList.add('item-list')
+
+            // если путь является папкой, добавляем соответствующий класс и возможность нажать на него
             if (data[i].type == "Папка") {
                 newPath.classList.add('item-list-folder')
 
@@ -73,6 +85,7 @@ function createNewElements(data) {
                 }
             }
 
+            // инициализируем составляющие информации о путе: название, тип, размер и дату редактирования
             const pathComponents = [
                 { text: data[i].relPath, class: 'path-component' },
                 { text: data[i].type, class: 'path-component' },
@@ -80,6 +93,7 @@ function createNewElements(data) {
                 { text: data[i].editDate, class: 'path-component' }
             ]
 
+            // для каждого такого составляющего отрисовываем его в качестве потомка пути, которому они принадлежат
             pathComponents.forEach(element => {
                 let newComponent = document.createElement('div')
                 newComponent.textContent = element.text
@@ -87,6 +101,7 @@ function createNewElements(data) {
                 newPath.appendChild(newComponent)
             })
 
+            // добавляем созданный элемент пути в список
             pathList.appendChild(newPath)
         }
 }
