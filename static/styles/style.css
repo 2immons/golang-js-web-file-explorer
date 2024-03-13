@@ -297,6 +297,8 @@ table {
 
 .error-data-not-found-active {
     display: flex;
+    padding: 0px 0px 5px 0px;
+    height: 500px;
 }
 
 .path-list__item {

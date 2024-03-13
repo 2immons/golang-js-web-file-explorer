@@ -45,8 +45,7 @@ function getPaths(url) {
     .then(data => {
         let errorDiv = document.querySelector('.error-data-not-found')
         // если статус с сервера не удовлетворительный, то вывод ошибки
-        if (data.serverStatus == false) {
-            console.log(data.serverErrorText)
+        if (data.serverIsSucceed == false) {
             // удаление всех ранее отрисованных путей (потомков списка)
             let itemList = document.querySelector('.path-list-section')
             while (itemList.firstChild) {
@@ -54,7 +53,7 @@ function getPaths(url) {
             }
             // вывод ошибки
             errorDiv.classList.add('error-data-not-found-active')
-            throw new Error('Ошибка. Данные получены (статус 200 OK), но они пусты. Причина:')
+            throw new Error('Ошибка. Данные получены (статус 200 OK), но они пусты. Причина: ' + data.serverErrorText)
         }
         // вывод времени
         document.querySelector('.time').innerText = `Загружено за: ${data.loadTime} секунд`

@@ -4,13 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"sort"
-	"sync"
 	"time"
 )
 
@@ -35,7 +31,7 @@ type Config struct {
 }
 
 type ResponseStruct struct {
-	Status    bool        `json:"serverStatus"`    // булевое значение верной отработки запроса
+	IsSucceed bool        `json:"serverIsSucceed"` // булевое значение верной отработки запроса
 	ErrorText string      `json:"serverErrorText"` // текст ошибки, если она есть
 	Data      interface{} `json:"serverData"`      // поле с данными, передаваемыми в запросе
 	LoadTime  float64     `json:"loadTime"`        // время отработки сервера
@@ -50,73 +46,66 @@ const (
 )
 
 func main() {
-	config, err := getConfig(configFilePath)
+	// создание корневого контекста для программы с функцией отмены
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// отлавливание сигнала прерывания работы и передача его в канал
+	osSignalChan := make(chan os.Signal, 1)
+	signal.Notify(osSignalChan, os.Interrupt)
+
+	// ВОПРОС: через горутину или просто в конце?
+	// горутина закрытия приложения с отменой корневого контекста
+	go func() {
+		<-osSignalChan
+		fmt.Println("Получен сигнал остановки. Остановка сервера...")
+		cancel()
+	}()
+
+	config, err := readConfigFromFile(configFilePath)
 	if err != nil {
 		fmt.Printf("Ошибка загрузки конфигурационных данных: %v\n", err)
 		return
 	}
 
-	// создание корневого контекста для программы с функцией его отмены
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// горутина инициализации сервера
-	go func() {
-		server := &http.Server{
-			Addr:    ":" + config.Port,
-			Handler: http.DefaultServeMux,
-		}
-
-		staticFilesDir := http.Dir("./static")
-
-		http.Handle("/", http.StripPrefix("/static/", http.FileServer(staticFilesDir)))
-		http.HandleFunc("/paths", getPaths)
-
-		// горутина запуска сервера
-		go func() {
-			fmt.Printf("Запуск сервера на http://localhost:%s ...\n", config.Port)
-			if err := server.ListenAndServe(); err != nil {
-				fmt.Printf("Ошибка сервера: %v\n", err)
-			}
-		}()
-
-		// блокировка горутины до момента отмены контекста ctx;
-		<-ctx.Done()
-
-		// создание контекста для завершения работы сервера
-		shutdownCtx, cancelServer := context.WithCancel(ctx)
-		// автоматический вызов функции отмены серверного контекста
-		defer cancelServer()
-
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			fmt.Printf("Ошибка остановки сервера: %v\n", err)
-		}
-	}()
-
-	// ожидание сигнала отмены от OS или отмены корневого контекста для завершения программы
-	awaitProgramShutdown(ctx, cancel)
-}
-
-// awaitProgramShutdown ожидает либо сигнала остановки от OS либо отмены корневого контекста,
-// чтобы
-func awaitProgramShutdown(ctx context.Context, cancel context.CancelFunc) {
-	osSignalChan := make(chan os.Signal, 1)
-	signal.Notify(osSignalChan, os.Interrupt)
-
-	select {
-	case <-osSignalChan:
-		fmt.Println("Получен сигнал остановки. Остановка сервера...")
-	case <-ctx.Done():
-		fmt.Println("Контекст отменен из другой части программы. Остановка сервера...")
+	// инициализации сервера
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%s", config.Port),
+		Handler: http.DefaultServeMux,
 	}
 
-	cancel() // избыточный?
+	/*
+		без StripPrefix("/static/") не дает загрузить script.js:
+		Refused to execute script from 'http://localhost:8324/static/script.js' because its MIME type ('text/plain'), because...
+	*/
+	staticFilesDir := http.Dir("./static")
 
-	time.Sleep(1 * time.Second)
-	fmt.Println("Программа остановлена.")
+	http.Handle("/", http.StripPrefix("/static/", http.FileServer(staticFilesDir)))
+	http.HandleFunc("/paths", getPaths)
+
+	// горутина запуска сервера
+	go func() {
+		fmt.Printf("Запуск сервера на http://localhost:%s ...\n", config.Port)
+		err := server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			panic(err)
+		}
+
+		// обработка паники в случае ошибки сервера
+		defer func() {
+			err := recover()
+			if err != nil {
+				fmt.Printf("Остановка сервера из-за паники: %v.", err)
+				cancel()
+			}
+		}()
+	}()
+
+	// блокировка программы до момента отмены контекста ctx;
+	<-ctx.Done()
 }
 
-// getConfig получает кофигурационные данные из соответствующего файла и возвращает их
-func getConfig(configFilePath string) (Config, error) {
+// readConfigFromFile получает кофигурационные данные из соответствующего файла и возвращает их
+func readConfigFromFile(configFilePath string) (Config, error) {
 	var config Config
 	configFileContent, err := os.ReadFile(configFilePath)
 	if err != nil {
@@ -145,7 +134,7 @@ func getRequestParams(r *http.Request) (string, string, string) {
 func getPaths(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	response := ResponseStruct{
-		Status:    true,
+		IsSucceed: true,
 		ErrorText: "",
 		Data:      "",
 		LoadTime:  0,
@@ -159,7 +148,7 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusOK)
 		response.ErrorText = fmt.Sprintf("Ошибка при создании сортированного среза данных: %v", err)
-		response.Status = false
+		response.IsSucceed = false
 		duration := float64(time.Since(startTime).Seconds())
 		response.LoadTime = duration
 		response.Data = "No data"
@@ -197,198 +186,4 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseJsonFormat)
-}
-
-// createConvertedPathsSliceForJson создает срез элементов в заданной директории для дальнейшей конвертации в JSON формат
-func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson {
-	pathsSliceForJson := make([]pathItemsForJson, len(pathsSlice))
-
-	for i, value := range pathsSlice {
-		// замена bool на сооветствующее string элементов pathsSlice
-		isDirValue := "Файл"
-		if value.IsDir {
-			isDirValue = "Папка"
-		}
-
-		// присвоение значений новому срезу
-		pathsSliceForJson[i] = pathItemsForJson{
-			RelPath:  value.RelPath,
-			ItemSize: formatSize(value.ItemSize),
-			IsDir:    isDirValue,
-			EditDate: value.EditDate.Format("02.01.2006 15:04"),
-		}
-	}
-
-	return pathsSliceForJson
-}
-
-// createSortedSliceOfPathItems создает сортированный срез элементов в заданной директории
-func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]pathItems, error) {
-	// обход заданной директории
-	dirEntries, err := os.ReadDir(srcPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var wg sync.WaitGroup
-
-	// срез состоящий из элементов в заданной директории
-	pathsSlice := []pathItems{}
-
-	// получение информации о каждой директории (имя, размер, тип, время модификации) и запись в срез pathsSlice
-	for i, dirEntry := range dirEntries {
-		wg.Add(1)
-		go func(index int, dirEntry os.DirEntry) {
-			defer wg.Done()
-			// текущий index передается внутрь замыкания, чтобы каждая горутина использовала свой уникальный индекс
-			getDirEntryInfoAndWriteToSlice(srcPath, dirEntry, &pathsSlice, index)
-		}(i, dirEntry)
-	}
-
-	// ожидание всех горутин обхода
-	wg.Wait()
-
-	// вызов функций сортировки среза pathSlice в зависимости от поля сортировки
-	if sortField == "size" {
-		sortPathsBySize(pathsSlice, sortOrder)
-	} else if sortField == "name" {
-		sortPathsByRelPath(pathsSlice, sortOrder)
-	} else if sortField == "type" {
-		sortPathsByType(pathsSlice, sortOrder)
-	} else if sortField == "date" {
-		sortPathsByEditDate(pathsSlice, sortOrder)
-	}
-	return pathsSlice, nil
-}
-
-// getDirEntryInfoAndWriteToSlice получает имя, размер, тип (файл или директория) и последнее время редактирования директории,
-// после чего добавляет эту информацию в срез pathSlice по своему уникальному индексу
-func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice *[]pathItems, index int) {
-	// получение путя от корневой директории до текущей папки или файла
-	currentPath := filepath.Join(srcPath, dirEntry.Name())
-
-	// получение размера файла или директории по заданному пути
-	itemSize, err := getDirSize(currentPath, dirEntry)
-	if err != nil {
-		return
-	}
-
-	fileInfo, err := dirEntry.Info()
-	if err != nil {
-		return
-	}
-
-	lastModifiedTime := fileInfo.ModTime()
-
-	// добавление в срез пустых элементов пока длина среза меньше или равна текущему индексу, чтобы избежать выход за границы
-	// ВОПРОС: такое может случиться, если горутина с индексом 10 обгонит некоторые предшествущие, верно ведь?
-	for len(*pathsSlice) <= index {
-		*pathsSlice = append(*pathsSlice, pathItems{})
-	}
-
-	// вставка данных напрямую в срез по индексу
-	(*pathsSlice)[index] = pathItems{dirEntry.Name(), itemSize, dirEntry.IsDir(), lastModifiedTime}
-}
-
-// getDirSize по заданному пути получает размер директории (файла или папки)
-func getDirSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
-
-	// вызов calculateFolderSize(), если путь является папкой
-	if dirEntry.IsDir() {
-		itemSize, err := calculateFolderSize(currentPath)
-		if err != nil {
-			return 0, err
-		}
-		return itemSize, nil
-	} else {
-		fileInfo, err := dirEntry.Info()
-		if err != nil {
-			return 0, err
-		}
-		itemSize := fileInfo.Size()
-		return itemSize, nil
-	}
-}
-
-// sortParths производит сортировку среза
-func sortPathsBySize(pathsSlice []pathItems, sortOrder string) {
-	less := func(i, j int) bool {
-		if sortOrder == string(asc) {
-			return pathsSlice[i].ItemSize > pathsSlice[j].ItemSize
-		} else {
-			return pathsSlice[i].ItemSize < pathsSlice[j].ItemSize
-		}
-	}
-
-	sort.Slice(pathsSlice, less)
-}
-
-func sortPathsByRelPath(pathsSlice []pathItems, sortOrder string) {
-	less := func(i, j int) bool {
-		if sortOrder == string(asc) {
-			return pathsSlice[i].RelPath < pathsSlice[j].RelPath
-		} else {
-			return pathsSlice[i].RelPath > pathsSlice[j].RelPath
-		}
-	}
-
-	sort.Slice(pathsSlice, less)
-}
-
-func sortPathsByType(pathsSlice []pathItems, sortOrder string) {
-	less := func(i, j int) bool {
-		if sortOrder == string(asc) {
-			return pathsSlice[i].IsDir && !pathsSlice[j].IsDir
-		} else {
-			return !pathsSlice[i].IsDir && pathsSlice[j].IsDir
-		}
-	}
-
-	sort.Slice(pathsSlice, less)
-}
-
-func sortPathsByEditDate(pathsSlice []pathItems, sortOrder string) {
-	less := func(i, j int) bool {
-		if sortOrder == string(asc) {
-			return pathsSlice[i].EditDate.Before(pathsSlice[j].EditDate)
-		} else {
-			return pathsSlice[i].EditDate.After(pathsSlice[j].EditDate)
-		}
-	}
-
-	sort.Slice(pathsSlice, less)
-}
-
-// formatSize переводит размер из байт в удобный вид (Кб, Мб)
-func formatSize(size int64) string {
-	const kb = 1024
-	const mb = 1024 * kb
-	const gb = 1024 * mb
-
-	switch {
-	case size < kb:
-		return fmt.Sprintf("%d байт", size)
-	case size < mb:
-		return fmt.Sprintf("%.2f Кб", float64(size)/float64(kb))
-	case size < gb:
-		return fmt.Sprintf("%.2f Мб", float64(size)/float64(mb))
-	default:
-		return fmt.Sprintf("%.2f Гб", float64(size)/float64(gb))
-	}
-}
-
-// calculateFolderSize подсчитывает размер папки, учитывая все вложенные в нее элементы
-func calculateFolderSize(folderPath string) (int64, error) {
-	var size int64
-
-	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		size += info.Size()
-		return nil
-	})
-
-	return size, err
 }
