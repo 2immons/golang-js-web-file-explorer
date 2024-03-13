@@ -26,38 +26,38 @@
             <hr class="div-line">
             <section class="workspace-wrapper">
                 <div class="workspace">
-                    <div class="list-path">
+                    <div class="workspace__path-wrapper">
                         <input class="path" id="path" onkeyup="setNewPathByInput(event)">
                         <div class="path-buttons">
-                            <button class="path-button path-button-back" onclick="setPreviousPath()">Назад</button>
-                            <button class="path-button path-button-home" onclick="setDefaultPath()">К корневой</button>
+                            <button class="path-button path-button_back" onclick="setPreviousPath()">Назад</button>
+                            <button class="path-button path-button_home" onclick="setDefaultPath()">К корневой</button>
                         </div>
                     </div>
                     <div class="table-section">
-                        <div class="list-header">
-                            <div class="list-header-col list-header-col-1">
+                        <div class="table-section__header">
+                            <div class="table-section__header-col">
                                 <button class="sort-button" onclick="sortTable('name')">
                                     Имя
                                 </button>
                             </div>
-                            <div class="list-header-col list-header-col-2">
+                            <div class="table-section__header-col">
                                 <button class="sort-button" onclick="sortTable('type')">
                                     Тип
                                 </button>
                             </div>
-                            <div class="list-header-col list-header-col-3">
+                            <div class="table-section__header-col">
                                 <button class="sort-button" onclick="sortTable('size')">
                                     Размер
                                 </button>
                             </div>
-                            <div class="list-header-col list-header-col-4">
+                            <div class="table-section__header-col">
                                 <button class="sort-button" onclick="sortTable('date')">
                                     Дата изменения
                                 </button>
                             </div>
                         </div>
                         <div class="error-data-not-found">Нет данных!</div>
-                        <div class="list-section"></div>  
+                        <div class="path-list-section"></div>  
                     </div>              
                 </div>
             </section>

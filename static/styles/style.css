@@ -110,19 +110,6 @@ table {
     max-width: 80%;
 }
 
-.div-line {
-    border: none;
-    height: 1px;
-    background-color: #b8b6b6;
-    margin: 0;
-}
-
-.time{
-    position: absolute;
-    margin-top: 10px;
-    font-size: 12px;
-}
-
 @media (max-width: 770px) {
     .container {
         max-width: 97%;
@@ -141,12 +128,17 @@ table {
     }
 }
 
-.error-data-not-found {
-    display: none;
+.div-line {
+    border: none;
+    height: 1px;
+    background-color: #b8b6b6;
+    margin: 0;
 }
 
-.error-data-not-found-active {
-    display: flex;
+.time{
+    position: absolute;
+    margin-top: 10px;
+    font-size: 12px;
 }
 
 .header-wrapper {
@@ -195,7 +187,7 @@ table {
     width: 100%;
 }
 
-.list-path {
+.workspace__path-wrapper {
     display: flex;
     flex-direction: row;
     height: fit-content;
@@ -218,7 +210,7 @@ table {
     outline: none;
     width: calc(100% - 220px);
 }
-.path:focus {
+.workspace__path:focus {
     border-color: #66afe9;
     box-shadow: 0 0 5px rgba(102, 175, 233, 0.6);
 }
@@ -253,7 +245,7 @@ table {
     background-color: #e0e0e0;
 }
 
-.list-header {
+.table-section__header {
     display: grid;
     align-items: center;
     justify-content: space-between;
@@ -263,7 +255,7 @@ table {
     border-bottom: 1px solid rgb(145, 145, 145);
 }
 
-.list-header-col {
+.table-section__header-col {
     display: flex;
     justify-content: left;
     align-items: center;
@@ -294,12 +286,20 @@ table {
     overflow-y: scroll;
 }
 
-.list-section {
+.path-list-section {
     padding: 0px 0px 5px 0px;
     height: 500px;
 }
 
-.item-list {
+.error-data-not-found {
+    display: none;
+}
+
+.error-data-not-found-active {
+    display: flex;
+}
+
+.path-list__item {
     display: grid;
     align-items: center;
     justify-content: space-between;
@@ -310,17 +310,17 @@ table {
     cursor: not-allowed;
 }
 
-.item-list-folder {
+.path-list__item_folder {
     transition: background-color 0.3s ease;
     cursor: pointer;
 }
 
-.item-list-folder:hover {
+.path-list__item_folder:hover {
     background-color: #e0e0e0;
     font-weight: 550;
 }
 
-.path-component {
+.path-list__item__component {
     padding: 0px 5px;
     display: flex;
     justify-content: left;

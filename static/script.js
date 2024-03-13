@@ -27,12 +27,10 @@ function getPaths(url) {
         }
     })
     .then(response => {
-        // нахождение элемента, отобращающий ошибки
         let errorDiv = document.querySelector('.error-data-not-found')
         if (!response.ok) {
-            console.log(2)
             // удаление всех ранее отрисованных путей (потомков списка)
-            let itemList = document.querySelector('.list-section')
+            let itemList = document.querySelector('.path-list-section')
             while (itemList.firstChild) {
                 itemList.removeChild(itemList.firstChild)
             }
@@ -45,10 +43,16 @@ function getPaths(url) {
         return response.json()
     })
     .then(data => {
+        let errorDiv = document.querySelector('.error-data-not-found')
         // если статус с сервера не удовлетворительный, то вывод ошибки
         if (data.serverStatus == false) {
             console.log(data.serverErrorText)
-            let errorDiv = document.querySelector('.error-data-not-found')
+            // удаление всех ранее отрисованных путей (потомков списка)
+            let itemList = document.querySelector('.path-list-section')
+            while (itemList.firstChild) {
+                itemList.removeChild(itemList.firstChild)
+            }
+            // вывод ошибки
             errorDiv.classList.add('error-data-not-found-active')
             throw new Error('Ошибка. Данные получены (статус 200 OK), но они пусты. Причина:')
         }
@@ -65,7 +69,7 @@ function getPaths(url) {
 
 // createNewElements отрисовывает полученные с сервера пути в качестве потомков списка
 function createNewElements(data) {
-    let pathList = document.querySelector('.list-section')
+    let pathList = document.querySelector('.path-list-section')
 
         while (pathList.firstChild) {
             pathList.removeChild(pathList.firstChild)
@@ -74,11 +78,11 @@ function createNewElements(data) {
         for (let i = 0; i < data.length; i++) {
             // создаем элемент нового пути
             let newPath = document.createElement('div')
-            newPath.classList.add('item-list')
+            newPath.classList.add('path-list__item')
 
             // если путь является папкой, добавляем соответствующий класс и возможность нажать на него
             if (data[i].type == "Папка") {
-                newPath.classList.add('item-list-folder')
+                newPath.classList.add('path-list__item_folder')
 
                 newPath.onclick = function () {
                     setNewPath(data[i].relPath)
@@ -87,10 +91,10 @@ function createNewElements(data) {
 
             // инициализируем составляющие информации о путе: название, тип, размер и дату редактирования
             const pathComponents = [
-                { text: data[i].relPath, class: 'path-component' },
-                { text: data[i].type, class: 'path-component' },
-                { text: data[i].itemSize, class: 'path-component' },
-                { text: data[i].editDate, class: 'path-component' }
+                { text: data[i].relPath, class: 'path-list__item__component' },
+                { text: data[i].type, class: 'path-list__item__component' },
+                { text: data[i].itemSize, class: 'path-list__item__component' },
+                { text: data[i].editDate, class: 'path-list__item__component' }
             ]
 
             // для каждого такого составляющего отрисовываем его в качестве потомка пути, которому они принадлежат
