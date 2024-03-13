@@ -236,12 +236,13 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 	pathsSlice := []pathItems{}
 
 	// получение информации о каждой директории (имя, размер, тип, время модификации) и запись в срез pathsSlice
-	for _, dirEntry := range dirEntries {
+	for i, dirEntry := range dirEntries {
 		wg.Add(1)
-		go func(dirEntry os.DirEntry) {
-			getDirEntryInfoAndWriteToSlice(srcPath, dirEntry, &pathsSlice)
-			wg.Done()
-		}(dirEntry)
+		go func(index int, dirEntry os.DirEntry) {
+			defer wg.Done()
+			// текущий index передается внутрь замыкания, чтобы каждая горутина использовала свой уникальный индекс
+			getDirEntryInfoAndWriteToSlice(srcPath, dirEntry, &pathsSlice, index)
+		}(i, dirEntry)
 	}
 
 	// ожидание всех горутин обхода
@@ -261,10 +262,8 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 }
 
 // getDirEntryInfoAndWriteToSlice получает имя, размер, тип (файл или директория) и последнее время редактирования директории,
-// после чего добавляет эту информацию в срез pathSlice
-func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice *[]pathItems) {
-	var mu sync.Mutex
-	mu.Lock()
+// после чего добавляет эту информацию в срез pathSlice по своему уникальному индексу
+func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice *[]pathItems, index int) {
 	// получение путя от корневой директории до текущей папки или файла
 	currentPath := filepath.Join(srcPath, dirEntry.Name())
 
@@ -281,8 +280,14 @@ func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsS
 
 	lastModifiedTime := fileInfo.ModTime()
 
-	*pathsSlice = append(*pathsSlice, pathItems{dirEntry.Name(), itemSize, dirEntry.IsDir(), lastModifiedTime})
-	mu.Unlock()
+	// добавление в срез пустых элементов пока длина среза меньше или равна текущему индексу, чтобы избежать выход за границы
+	// ВОПРОС: такое может случиться, если горутина с индексом 10 обгонит некоторые предшествущие, верно ведь?
+	for len(*pathsSlice) <= index {
+		*pathsSlice = append(*pathsSlice, pathItems{})
+	}
+
+	// вставка данных напрямую в срез по индексу
+	(*pathsSlice)[index] = pathItems{dirEntry.Name(), itemSize, dirEntry.IsDir(), lastModifiedTime}
 }
 
 // getDirSize по заданному пути получает размер директории (файла или папки)
