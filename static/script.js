@@ -30,6 +30,7 @@ function getPaths(url) {
         // нахождение элемента, отобращающий ошибки
         let errorDiv = document.querySelector('.error-data-not-found')
         if (!response.ok) {
+            console.log(2)
             // удаление всех ранее отрисованных путей (потомков списка)
             let itemList = document.querySelector('.list-section')
             while (itemList.firstChild) {
@@ -37,20 +38,19 @@ function getPaths(url) {
             }
             // вывод ошибки
             errorDiv.classList.add('error-data-not-found-active')
-            throw new Error('Ошибка запроса')
+            throw new Error('Ошибка. Данные не получены (статус отличен от 200 OK). Причина:')
         }
         // сокрытие ошибки
         errorDiv.classList.remove('error-data-not-found-active')
         return response.json()
     })
     .then(data => {
-        console.log(data)
         // если статус с сервера не удовлетворительный, то вывод ошибки
         if (data.serverStatus == false) {
             console.log(data.serverErrorText)
             let errorDiv = document.querySelector('.error-data-not-found')
             errorDiv.classList.add('error-data-not-found-active')
-            throw new Error('Ошибка запроса')
+            throw new Error('Ошибка. Данные получены (статус 200 OK), но они пусты. Причина:')
         }
         // вывод времени
         document.querySelector('.time').innerText = `Загружено за: ${data.loadTime} секунд`
@@ -147,7 +147,7 @@ function setNewPathByInput() {
     if (event.key === "Enter") {
         let inputValue = document.getElementById("path").value
         if (inputValue.charAt(inputValue.length - 1) === "/") {
-            inputValue = inputValue.slice(0, -1);
+            inputValue = inputValue.slice(0, -1)
         }
         currentPath = inputValue
         const url = `/paths?sortField=${encodeURIComponent(defaultSortField)}&sortOrder=${encodeURIComponent(defaultSortOrder)}&path=${encodeURIComponent(currentPath)}`

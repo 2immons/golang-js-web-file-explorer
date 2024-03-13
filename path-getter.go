@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -48,24 +50,69 @@ const (
 )
 
 func main() {
-	// получение конфигурационных данных из файла
 	config, err := getConfig(configFilePath)
 	if err != nil {
-		fmt.Println("Error config:", err)
+		fmt.Printf("Ошибка загрузки конфигурационных данных: %v\n", err)
 		return
 	}
 
-	http.Handle("/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	http.HandleFunc("/paths", getPaths)
+	// создание корневого контекста для программы с функцией его отмены
+	ctx, cancel := context.WithCancel(context.Background())
 
-	//http.HandleFunc("/", routeHandler) // ВОПРОС: роутер можно реализовать здесь как отдельный handler, который будет пересылать по путям?
+	// горутина инициализации сервера
+	go func() {
+		server := &http.Server{
+			Addr:    ":" + config.Port,
+			Handler: http.DefaultServeMux,
+		}
 
-	adress := ":" + config.Port
+		staticFilesDir := http.Dir("./static")
 
-	fmt.Printf("Starting server at http://localhost:%s ...\n", config.Port)
-	if err := http.ListenAndServe(adress, nil); err != nil {
-		fmt.Println(err)
+		http.Handle("/", http.StripPrefix("/static/", http.FileServer(staticFilesDir)))
+		http.HandleFunc("/paths", getPaths)
+
+		// горутина запуска сервера
+		go func() {
+			fmt.Printf("Запуск сервера на http://localhost:%s ...\n", config.Port)
+			if err := server.ListenAndServe(); err != nil {
+				fmt.Printf("Ошибка сервера: %v\n", err)
+			}
+		}()
+
+		// блокировка горутины до момента отмены контекста ctx;
+		<-ctx.Done()
+
+		// создание контекста для завершения работы сервера
+		shutdownCtx, cancelServer := context.WithCancel(ctx)
+		// автоматический вызов функции отмены серверного контекста
+		defer cancelServer()
+
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			fmt.Printf("Ошибка остановки сервера: %v\n", err)
+		}
+	}()
+
+	// ожидание сигнала отмены от OS или отмены корневого контекста для завершения программы
+	awaitProgramShutdown(ctx, cancel)
+}
+
+// awaitProgramShutdown ожидает либо сигнала остановки от OS либо отмены корневого контекста,
+// чтобы
+func awaitProgramShutdown(ctx context.Context, cancel context.CancelFunc) {
+	osSignalChan := make(chan os.Signal, 1)
+	signal.Notify(osSignalChan, os.Interrupt)
+
+	select {
+	case <-osSignalChan:
+		fmt.Println("Получен сигнал остановки. Остановка сервера...")
+	case <-ctx.Done():
+		fmt.Println("Контекст отменен из другой части программы. Остановка сервера...")
 	}
+
+	cancel() // избыточный?
+
+	time.Sleep(1 * time.Second)
+	fmt.Println("Программа остановлена.")
 }
 
 // getConfig получает кофигурационные данные из соответствующего файла и возвращает их
@@ -116,6 +163,15 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 		duration := float64(time.Since(startTime).Seconds())
 		response.LoadTime = duration
 		response.Data = "No data"
+
+		responseJsonFormat, err := json.Marshal(response)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			// как тут показывать ошибку?
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(responseJsonFormat)
 		return
 	}
 
