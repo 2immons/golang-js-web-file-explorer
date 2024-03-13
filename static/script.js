@@ -18,6 +18,85 @@ document.addEventListener('DOMContentLoaded', function () {
     getPaths(url)
 });
 
+// getPaths получает данные с сервера и создает элементы на странице
+function getPaths(url) {
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        let errorDiv = document.querySelector('.error-data-not-found')
+        if (!response.ok) {
+            let itemList = document.querySelector('.list-section')
+            while (itemList.firstChild) {
+                itemList.removeChild(itemList.firstChild)
+            }
+            errorDiv.classList.add('error-data-not-found-active')
+            throw new Error('Ошибка запроса')
+        }
+        errorDiv.classList.remove('error-data-not-found-active')
+        return response.json()
+    })
+    .then(data => {
+        console.log(data)
+        if (data.serverStatus == false) {
+            console.log(data.serverErrorText)
+            let errorDiv = document.querySelector('.error-data-not-found')
+            errorDiv.classList.add('error-data-not-found-active')
+        }
+        document.querySelector('.time').innerText = `Загружено за: ${data.loadTime} секунд`
+
+        createNewElements(data.serverData)
+    })
+    .catch(error => {
+        console.error('Ошибка запроса:', error)
+    })
+};
+
+function createNewElements(data) {
+    let pathList = document.querySelector('.list-section')
+
+        while (pathList.firstChild) {
+            pathList.removeChild(pathList.firstChild)
+        }
+
+        for (let i = 0; i < data.length; i++) {
+            let newPath = document.createElement('div')
+            newPath.classList.add('item-list')
+            if (data[i].type == "Папка") {
+                newPath.classList.add('item-list-folder')
+
+                newPath.onclick = function () {
+                    setNewPath(data[i].relPath)
+                }
+            }
+
+            const pathComponents = [
+                { text: data[i].relPath, class: 'path-component' },
+                { text: data[i].type, class: 'path-component' },
+                { text: data[i].itemSize, class: 'path-component' },
+                { text: data[i].editDate, class: 'path-component' }
+            ]
+
+            pathComponents.forEach(element => {
+                let newComponent = document.createElement('div')
+                newComponent.textContent = element.text
+                newComponent.classList.add(element.class)
+                newPath.appendChild(newComponent)
+            })
+
+            pathList.appendChild(newPath)
+        }
+}
+
+// sortTable обрабатывает нажатие кнопки сортировки (определяет порядок)
+function sortTable(sortField) {
+    const sortOrder = globalSortOrder === ASC ? (globalSortOrder = DESC) : (globalSortOrder = ASC)
+    const url = `/paths?sortField=${encodeURIComponent(sortField)}&sortOrder=${encodeURIComponent(sortOrder)}&path=${encodeURIComponent(currentPath)}`
+    getPaths(url)
+};
 
 // setDefaultPath устанавливает значение текущего пути в стандартный defaultPath
 function setDefaultPath() {
@@ -61,76 +140,4 @@ function setNewPathByInput() {
         let pathInput = document.getElementById('path')
         pathInput.value = currentPath
     }
-};
-
-// getPaths получает данные с сервера и создает элементы на странице
-function getPaths(url) {
-    fetch(url, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-        })
-        .then(response => {
-            if (!response.ok) {
-                let itemList = document.querySelector('.list-section')
-                while (itemList.firstChild) {
-                    itemList.removeChild(itemList.firstChild)
-                }
-                let errorDiv = document.querySelector('.error-data-not-found')
-                errorDiv.classList.add('error-data-not-found-active')
-                return         // TODO: почем когд продолжается дальше?
-            }
-            let errorDiv = document.querySelector('.error-data-not-found')
-            errorDiv.classList.remove('error-data-not-found-active')
-            return response.json()
-        })
-        .then(response => {
-            console.log(response)
-            document.querySelector('.time').innerText = `Загружено за: ${response.loadTime} секунд`
-
-            let pathList = document.querySelector('.list-section')
-
-            while (pathList.firstChild) {
-                pathList.removeChild(pathList.firstChild)
-            }
-
-            for (let i = 0; i < response.data.length; i++) {
-                let newPath = document.createElement('div')
-                newPath.classList.add('item-list')
-                if (response.data[i].type == "Папка" && response.data[i].itemSize[0] !== "0") {
-                    newPath.classList.add('item-list-folder')
-                    
-                    newPath.onclick = function () {
-                        setNewPath(response.data[i].relPath)
-                    }
-                }
-
-                const pathComponents = [
-                    { text: response.data[i].relPath, class: 'path-component' },
-                    { text: response.data[i].type, class: 'path-component' },
-                    { text: response.data[i].itemSize, class: 'path-component' },
-                    { text: response.data[i].editDate, class: 'path-component' }
-                ]
-
-                pathComponents.forEach(element => {
-                    let newComponent = document.createElement('div')
-                    newComponent.textContent = element.text
-                    newComponent.classList.add(element.class)
-                    newPath.appendChild(newComponent)
-                })
-
-                pathList.appendChild(newPath)
-            }
-        })
-        .catch(error => {
-            console.error('Ошибка запроса:', error)
-        })
-};
-
-// sortTable обрабатывает нажатие кнопки сортировки (определяет порядок)
-function sortTable(sortField) {
-    const sortOrder = globalSortOrder === ASC ? (globalSortOrder = DESC) : (globalSortOrder = ASC)
-    const url = `/paths?sortField=${encodeURIComponent(sortField)}&sortOrder=${encodeURIComponent(sortOrder)}&path=${encodeURIComponent(currentPath)}`
-    getPaths(url)
 };
