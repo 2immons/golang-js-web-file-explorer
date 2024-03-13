@@ -3,20 +3,67 @@ const DESC = 'desc'
 
 const defaultSortOrder = ASC
 const defaultSortField = 'size'
-const defaultPath = 'D:/Git Reps'
+
+const WINDOWS = "windows"
+const LINUX = "linux"
+
+let defaultPath = ''
+let os = ''
 
 let globalSortOrder = ASC
-let currentPath = defaultPath
+let currentPath = ''
 
 // загрузка страницы
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
+    // установка операционной системы и корневой директории пользователя
+    const userDataURL = `/user-info`
+    setDefaultPathAndOS(userDataURL)
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    currentPath = defaultPath
+
     let pathInput = document.getElementById('path')
     pathInput.value = defaultPath
-
     const url = `/paths?sortField=${encodeURIComponent(defaultSortField)}&sortOrder=${encodeURIComponent(defaultSortOrder)}&path=${encodeURIComponent(currentPath)}`
 
     getPaths(url)
 });
+
+// setDefaultPathAndOS получает данные об операционной системе и корневой директории пользователя
+// и устанавливает соответствующие значения глобальных переменных
+function setDefaultPathAndOS(url) {
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Ошибка. Данные не получены (статус отличен от 200 OK). Причина:')
+        }
+        return response.json()
+    })
+    .then(data => {
+        // если статус с сервера не удовлетворительный, то вывод ошибки
+        if (data.serverIsSucceed == false) {
+            throw new Error('Ошибка. Данные получены (статус 200 OK), но они пусты. Причина: ' + data.serverErrorText)
+        }
+        // временно:
+        // defaultPath = data.serverData.rootDir
+        os = data.serverData.os
+        if (os == WINDOWS) {
+            defaultPath = 'F:'
+        }
+        else if (os == LINUX) {
+            defaultPath = '/'
+        }
+        
+    })
+    .catch(error => {
+        console.error('Ошибка запроса:', error)
+    })
+};
 
 // getPaths получает данные с сервера и создает элементы на странице
 function getPaths(url) {
@@ -27,6 +74,7 @@ function getPaths(url) {
         }
     })
     .then(response => {
+        console.log(url)
         let errorDiv = document.querySelector('.error-data-not-found')
         if (!response.ok) {
             // удаление всех ранее отрисованных путей (потомков списка)
@@ -127,13 +175,25 @@ function setDefaultPath() {
 
 // setPreviousPath устанавливает значение текущего пути на 1 уровень выше
 function setPreviousPath() {
-    let pathArray = currentPath.split('/')
-    pathArray.pop()
-    currentPath = pathArray.join('/')
-    const url = `/paths?sortField=${encodeURIComponent(defaultSortField)}&sortOrder=${encodeURIComponent(defaultSortOrder)}&path=${encodeURIComponent(currentPath)}`
-    getPaths(url)
     let pathInput = document.getElementById('path')
-    pathInput.value = currentPath
+    let pathArray = currentPath.split('/')
+    if (os === WINDOWS && pathArray.length < 2) {
+        return
+    } 
+    else if (os === LINUX && pathArray.length < 2) {
+        currentPath = "/"
+        const url = `/paths?sortField=${encodeURIComponent(defaultSortField)}&sortOrder=${encodeURIComponent(defaultSortOrder)}&path=${encodeURIComponent(currentPath)}`
+        getPaths(url)
+        pathInput.value = currentPath
+        return
+    }
+    else {
+        pathArray.pop()
+        currentPath = pathArray.join('/')
+        const url = `/paths?sortField=${encodeURIComponent(defaultSortField)}&sortOrder=${encodeURIComponent(defaultSortOrder)}&path=${encodeURIComponent(currentPath)}`
+        getPaths(url)
+        pathInput.value = currentPath
+    }
 };
 
 // setPreviousPath устанавливает значение текущего пути в зависимости от директории, в которую пользователь перешел
@@ -149,9 +209,9 @@ function setNewPath(dir) {
 function setNewPathByInput() {
     if (event.key === "Enter") {
         let inputValue = document.getElementById("path").value
-        if (inputValue.charAt(inputValue.length - 1) === "/") {
-            inputValue = inputValue.slice(0, -1)
-        }
+        // if (inputValue.charAt(inputValue.length - 1) === "/") {
+        //     inputValue = inputValue.slice(0, -1)
+        // }
         currentPath = inputValue
         const url = `/paths?sortField=${encodeURIComponent(defaultSortField)}&sortOrder=${encodeURIComponent(defaultSortOrder)}&path=${encodeURIComponent(currentPath)}`
         getPaths(url)

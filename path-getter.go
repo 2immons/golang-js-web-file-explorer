@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -81,6 +83,7 @@ func main() {
 
 	http.Handle("/", http.StripPrefix("/static/", http.FileServer(staticFilesDir)))
 	http.HandleFunc("/paths", getPaths)
+	http.HandleFunc("/user-info", getUserInfo)
 
 	// горутина запуска сервера
 	go func() {
@@ -118,14 +121,6 @@ func readConfigFromFile(configFilePath string) (Config, error) {
 	}
 
 	return config, nil
-}
-
-// getRequestParams получает параметры из запроса: путь корневой папки, поле сортировки, порядок сортировки
-func getRequestParams(r *http.Request) (string, string, string) {
-	srcPath := r.URL.Query().Get("path")
-	sortField := r.URL.Query().Get("sortField")
-	sortOrder := r.URL.Query().Get("sortOrder")
-	return srcPath, sortField, sortOrder
 }
 
 // getPaths совершает обход директорий по указанному в запросе пути,
@@ -173,6 +168,64 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	// составление ответа на клиент
 	response.Data = pathsSliceForJson
 	response.LoadTime = duration
+
+	// конвертация ответа на клиент в JSON формат
+	responseJsonFormat, err := json.Marshal(response)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		// как тут показывать ошибку?
+		return
+	}
+
+	// отправка ответа на клиент
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(responseJsonFormat)
+}
+
+// getRequestParams получает параметры из запроса: путь корневой папки, поле сортировки, порядок сортировки
+func getRequestParams(r *http.Request) (string, string, string) {
+	srcPath := r.URL.Query().Get("path")
+	sortField := r.URL.Query().Get("sortField")
+	sortOrder := r.URL.Query().Get("sortOrder")
+	return srcPath, sortField, sortOrder
+}
+
+func getUserInfo(w http.ResponseWriter, r *http.Request) {
+	startTime := time.Now()
+	currentDir, err := os.Getwd()
+	if err != nil {
+		duration := float64(time.Since(startTime).Seconds())
+		response := ResponseStruct{
+			IsSucceed: false,
+			ErrorText: fmt.Sprintf("Ошибка при получении директории: %v", err),
+			Data:      "No data",
+			LoadTime:  duration,
+		}
+		responseJsonFormat, err := json.Marshal(response)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			// как тут показывать ошибку?
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(responseJsonFormat)
+		return
+	}
+
+	rootDir := filepath.VolumeName(filepath.Clean(currentDir))
+	duration := float64(time.Since(startTime).Seconds())
+
+	response := ResponseStruct{
+		IsSucceed: true,
+		ErrorText: "",
+		Data: map[string]interface{}{
+			"os":      runtime.GOOS,
+			"rootDir": rootDir,
+		},
+		LoadTime: duration,
+	}
 
 	// конвертация ответа на клиент в JSON формат
 	responseJsonFormat, err := json.Marshal(response)

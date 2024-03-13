@@ -9,29 +9,6 @@ import (
 	"sync"
 )
 
-// createConvertedPathsSliceForJson создает срез элементов в заданной директории для дальнейшей конвертации в JSON формат
-func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson {
-	pathsSliceForJson := make([]pathItemsForJson, len(pathsSlice))
-
-	for i, value := range pathsSlice {
-		// замена bool на сооветствующее string элементов pathsSlice
-		isDirValue := "Файл"
-		if value.IsDir {
-			isDirValue = "Папка"
-		}
-
-		// присвоение значений новому срезу
-		pathsSliceForJson[i] = pathItemsForJson{
-			RelPath:  value.RelPath,
-			ItemSize: formatSize(value.ItemSize),
-			IsDir:    isDirValue,
-			EditDate: value.EditDate.Format("02.01.2006 15:04"),
-		}
-	}
-
-	return pathsSliceForJson
-}
-
 // createSortedSliceOfPathItems создает сортированный срез элементов в заданной директории
 func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]pathItems, error) {
 	// обход заданной директории
@@ -69,6 +46,29 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 		sortPathsByEditDate(pathsSlice, sortOrder)
 	}
 	return pathsSlice, nil
+}
+
+// createConvertedPathsSliceForJson создает срез элементов в заданной директории для дальнейшей конвертации в JSON формат
+func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson {
+	pathsSliceForJson := make([]pathItemsForJson, len(pathsSlice))
+
+	for i, value := range pathsSlice {
+		// замена bool на сооветствующее string элементов pathsSlice
+		isDirValue := "Файл"
+		if value.IsDir {
+			isDirValue = "Папка"
+		}
+
+		// присвоение значений новому срезу
+		pathsSliceForJson[i] = pathItemsForJson{
+			RelPath:  value.RelPath,
+			ItemSize: formatSize(value.ItemSize),
+			IsDir:    isDirValue,
+			EditDate: value.EditDate.Format("02.01.2006 15:04"),
+		}
+	}
+
+	return pathsSliceForJson
 }
 
 // getDirEntryInfoAndWriteToSlice получает имя, размер, тип (файл или директория) и последнее время редактирования директории,
