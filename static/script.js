@@ -7,7 +7,7 @@ const defaultSortField = 'size'
 const WINDOWS = "windows"
 const LINUX = "linux"
 
-let defaultPath = ""
+let rootPath = ""
 let os = ""
 
 let currentSortOrder = ASC
@@ -15,7 +15,7 @@ let currentPath = ''
 
 // загрузка страницы
 document.addEventListener('DOMContentLoaded', async function () {
-    await getPaths(defaultSortField, defaultSortOrder, defaultPath)    
+    await getPaths(defaultSortField, defaultSortOrder, rootPath)    
 });
 
 // getPaths получает данные с сервера и создает элементы на странице
@@ -55,8 +55,8 @@ async function getPaths(sortField, sortOrder, path) {
         document.querySelector('.time').innerText = `Загружено за: ${data.loadTime} секунд`
 
         // если корневой путь не задан (первый запрос к серверу), то устанавливается корневой и текущий пути, а также операционная система
-        if (defaultPath == "") {
-            setDefaultPathAndOS(data.serverData[0].path)
+        if (rootPath == "") {
+            setRootPathAndOS(data.serverData[0].path)
         }
 
         // вызов функции отрисовки новых путей
@@ -69,22 +69,26 @@ async function getPaths(sortField, sortOrder, path) {
     }
 };
 
-function setDefaultPathAndOS(path) {
+// setRootPathAndOS устанавливает операционную систему и корневую директорию с помощью вспомогательных функций
+function setRootPathAndOS(path) {
     os = getOperationSystem(path)
-    currentPath = defaultPath = getDefaultPath(path)
+    currentPath = rootPath = getRootPath(path)
     setCurrentPathToInput()
 }
 
+// hideLoading включает отображение загрузки
 function showLoading() {
     const loadingDiv = document.querySelector('.loading-data')
     loadingDiv.style.display = 'flex'
 }
 
+// hideLoading скрывает отображение загрузки
 function hideLoading() {
     const loadingDiv = document.querySelector('.loading-data')
     loadingDiv.style.display = 'none'
 }
 
+// getOperationSystem возвращает операционную систему с помощью пути
 function getOperationSystem(path) {
     if (path[0] === "/") {
         return LINUX
@@ -94,6 +98,7 @@ function getOperationSystem(path) {
     }
 }
 
+// setCurrentPathToInput обновляет поле ввода директории под текущий путь
 function setCurrentPathToInput() {
     let pathInput = document.getElementById('path')
     pathInput.value = currentPath
@@ -107,13 +112,19 @@ function clearPathList() {
     }
 }
 
-// получение имени директории
+// getDirName получение имени директории из ее пути
 function getDirName(path) {
-    let pathArray = path.split("\\")
-    return pathArray[pathArray.length-1]
+    if (os === WINDOWS) {
+        let pathArray = path.split("\\")
+        return pathArray[pathArray.length-1]
+    } else if (os == LINUX) {
+        let pathArray = path.split('/')
+        return pathArray[pathArray.length-1]
+    }
 }
 
-function getDefaultPath(path) {
+// getDefaultPath получает корневой путь с помощью абсолютного пути
+function getRootPath(path) {
     let pathArray = path.split("\\")
     if (os == WINDOWS) {
         return pathArray[0] + "/"
@@ -169,19 +180,15 @@ function sortTable(sortField) {
     getPaths(sortField, sortOrder, currentPath)
 };
 
-// setDefaultPath устанавливает значение текущего пути в стандартный defaultPath
-function setDefaultPath() {
-    currentPath = defaultPath
-    getPaths(defaultSortField, defaultSortOrder, currentPath)
-    setCurrentPathToInput()
-};
-
 // setPreviousPath устанавливает значение текущего пути на 1 уровень выше
 function setPreviousPath() {
     let pathArray = currentPath.split('/')
 
+    // если путь вида "dir" ('/'), то установка возврат
+    if (currentPath.length <= 1) {
+        return
     // если в Windows путь вида "ДИСК:/dir", то установка "ДИСК:/"
-    if (os === WINDOWS && pathArray.length === 2) {
+    } else if (os === WINDOWS && pathArray.length === 2) {
         currentPath = pathArray[0] + "/"
         getPaths(defaultSortField, defaultSortOrder, currentPath)
         setCurrentPathToInput()
@@ -209,6 +216,7 @@ function setPreviousPath() {
 
 // setPreviousPath устанавливает значение текущего пути в зависимости от директории, в которую пользователь перешел
 function setNewPath(dir) {
+    console.log(currentPath)
     if (currentPath.endsWith("/")) {
         currentPath += dir
     } else {
