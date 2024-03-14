@@ -12,6 +12,7 @@ import (
 
 // структура элементов (файлов и директорий)
 type pathItems struct {
+	Name     string    // имя директории
 	Path     string    // путь к элементу (папке или директор)
 	ItemSize int64     // размер элемента
 	IsDir    bool      // является ли элемент директорией
@@ -20,7 +21,8 @@ type pathItems struct {
 
 // структура элементов (файлов и директорий) переведенные в string формат для отправки на клиент
 type pathItemsForJson struct {
-	Path     string `json:"path"`     // путь к элементу (папке или директор)
+	Name     string `json:"name"`     // имя директории
+	Path     string `json:"path"`     // путь к элементу (папке или директории)
 	ItemSize string `json:"itemSize"` // размер элемента
 	IsDir    string `json:"type"`     // является ли элемент директорией
 	EditDate string `json:"editDate"` // дата время последнего изменения
@@ -146,7 +148,7 @@ func getPathsWithContext(ctx context.Context, h http.HandlerFunc) http.HandlerFu
 func getPaths(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 
-	requestCtx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	requestCtx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
 
 	response := ResponseStruct{

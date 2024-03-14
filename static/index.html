@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/styles/style.css">
     <title>Document</title>
-    <script src="/static/script.js"></script>
+    <script type="module" src="/static/scripts/model.js"></script>
 </head>
 <body>
     <header class="header">
@@ -29,8 +29,8 @@
                     <div class="workspace__path-wrapper">
                         <input class="path" id="path" onkeyup="setNewPathByInput(event)">
                         <div class="path-buttons">
-                            <button class="path-button path-button_back" onclick="setPreviousPath()">Назад</button>
-                            <button class="path-button path-button_home" onclick="setDefaultPath()">К корневой</button>
+                            <button id="button-back" class="path-button path-button_back">Назад</button>
+                            <button id="button-home" class="path-button path-button_home">К корневой</button>
                         </div>
                     </div>
                     <div class="table-section">

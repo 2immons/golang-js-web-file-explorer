@@ -78,6 +78,7 @@ func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson
 
 		// присвоение значений новому срезу
 		pathsSliceForJson[i] = pathItemsForJson{
+			Name:     value.Name,
 			Path:     value.Path,
 			ItemSize: formatSize(value.ItemSize),
 			IsDir:    isDirValue,
@@ -106,10 +107,11 @@ func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsS
 	}
 
 	lastModifiedTime := fileInfo.ModTime()
-	absoluteDirPath := filepath.Join(srcPath, dirEntry.Name())
+	dirName := dirEntry.Name()
+	absoluteDirPath := filepath.Join(srcPath, dirName)
 
 	// вставка данных в срез по индексу
-	(pathsSlice)[index] = pathItems{absoluteDirPath, itemSize, dirEntry.IsDir(), lastModifiedTime}
+	(pathsSlice)[index] = pathItems{dirName, absoluteDirPath, itemSize, dirEntry.IsDir(), lastModifiedTime}
 }
 
 // getDirSize по заданному пути получает размер директории (файла или папки)
