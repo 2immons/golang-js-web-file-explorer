@@ -12,15 +12,10 @@ import (
 
 // createSortedSliceOfPathItems создает сортированный срез элементов в заданной директории
 func createSortedSliceOfPathItems(ctx context.Context, srcPath string, sortField string, sortOrder string) ([]pathItems, error) {
-	// go func() {
-	// 	<-ctx.Done()
-	// 	fmt.Println("bad")
-	// }()
-
 	select {
 	case <-ctx.Done():
-		fmt.Println("bad time")
-		err := fmt.Errorf("error")
+		fmt.Println("Обход вернул nil, err")
+		err := fmt.Errorf("долго директория (из функции обхода)")
 		return nil, err
 	default:
 	}

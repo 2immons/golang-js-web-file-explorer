@@ -81,7 +81,7 @@ func main() {
 	staticFilesDir := http.Dir("./static")
 
 	http.Handle("/", http.StripPrefix("/static/", http.FileServer(staticFilesDir)))
-	http.HandleFunc("/paths", getPaths)
+	http.HandleFunc("/paths", getPathsWithContext(ctx, getPaths))
 
 	// горутина запуска сервера
 	go func() {
@@ -99,6 +99,8 @@ func main() {
 				cancel()
 			}
 		}()
+
+		cancel()
 	}()
 
 	// блокировка программы до момента отмены контекста ctx;
@@ -131,13 +133,20 @@ func getRequestParams(r *http.Request) (string, string, string) {
 
 // ОБРАБОТЧКИ (func handlers):
 
+// getPathsWithContext представляет из себя мидлвар для передачи контекста из main в getPaths
+func getPathsWithContext(ctx context.Context, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		h(w, r.WithContext(ctx))
+	}
+}
+
 // getPaths совершает обход директорий по указанному в запросе пути,
 // получает информацию (имя, размер, тип: файл или папка и дата модификации) о каждом входящем в указанную директорию элементе (папке или файле)
 // и отправляет её в формате JSON
 func getPaths(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 
-	requestCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	requestCtx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
 	response := ResponseStruct{
@@ -169,6 +178,29 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(responseJsonFormat)
 		return
+	}
+
+	select {
+	case <-requestCtx.Done():
+		fmt.Println("Преывышено время ожидания.")
+		w.WriteHeader(http.StatusOK)
+		err := fmt.Errorf("превышено время ожидания обхода директории")
+		response.ErrorText = fmt.Sprintf("Ошибка при создании сортированного среза данных: %v", err)
+		response.IsSucceed = false
+		duration := float64(time.Since(startTime).Seconds())
+		response.LoadTime = duration
+		response.Data = "No data"
+
+		responseJsonFormat, err := json.Marshal(response)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			// как тут показывать ошибку?
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(responseJsonFormat)
+		return
+	default:
 	}
 
 	// создание нового среза элементов в заданной директории для дальнейшей конвертации в JSON формат
