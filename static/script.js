@@ -44,6 +44,7 @@ async function getPaths(sortField, sortOrder, path) {
         }
         
         const data = await response.json()
+        console.log(data)
 
         // если внутренний статус с сервера не удовлетворительный, то отображение ошибки
         if (data.serverIsSucceed == false) {

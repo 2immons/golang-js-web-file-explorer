@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -10,7 +11,20 @@ import (
 )
 
 // createSortedSliceOfPathItems создает сортированный срез элементов в заданной директории
-func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]pathItems, error) {
+func createSortedSliceOfPathItems(ctx context.Context, srcPath string, sortField string, sortOrder string) ([]pathItems, error) {
+	// go func() {
+	// 	<-ctx.Done()
+	// 	fmt.Println("bad")
+	// }()
+
+	select {
+	case <-ctx.Done():
+		fmt.Println("bad time")
+		err := fmt.Errorf("error")
+		return nil, err
+	default:
+	}
+
 	if srcPath == "" {
 		currentDir, err := os.Getwd()
 		if err != nil {

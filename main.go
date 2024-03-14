@@ -48,6 +48,7 @@ const (
 func main() {
 	// создание корневого контекста для программы с функцией отмены
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// отлавливание сигнала прерывания работы и передача его в канал
 	osSignalChan := make(chan os.Signal, 1)
@@ -120,11 +121,25 @@ func readConfigFromFile(configFilePath string) (Config, error) {
 	return config, nil
 }
 
+// getRequestParams получает параметры из запроса: путь корневой папки, поле сортировки, порядок сортировки
+func getRequestParams(r *http.Request) (string, string, string) {
+	srcPath := r.URL.Query().Get("path")
+	sortField := r.URL.Query().Get("sortField")
+	sortOrder := r.URL.Query().Get("sortOrder")
+	return srcPath, sortField, sortOrder
+}
+
+// ОБРАБОТЧКИ (func handlers):
+
 // getPaths совершает обход директорий по указанному в запросе пути,
 // получает информацию (имя, размер, тип: файл или папка и дата модификации) о каждом входящем в указанную директорию элементе (папке или файле)
 // и отправляет её в формате JSON
 func getPaths(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
+
+	requestCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
 	response := ResponseStruct{
 		IsSucceed: true,
 		ErrorText: "",
@@ -136,7 +151,7 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	srcPath, sortField, sortOrder := getRequestParams(r)
 
 	// создание сортированного среза элементов в заданной директории
-	pathsSlice, err := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
+	pathsSlice, err := createSortedSliceOfPathItems(requestCtx, srcPath, sortField, sortOrder)
 	if err != nil {
 		w.WriteHeader(http.StatusOK)
 		response.ErrorText = fmt.Sprintf("Ошибка при создании сортированного среза данных: %v", err)
@@ -178,12 +193,4 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseJsonFormat)
-}
-
-// getRequestParams получает параметры из запроса: путь корневой папки, поле сортировки, порядок сортировки
-func getRequestParams(r *http.Request) (string, string, string) {
-	srcPath := r.URL.Query().Get("path")
-	sortField := r.URL.Query().Get("sortField")
-	sortOrder := r.URL.Query().Get("sortOrder")
-	return srcPath, sortField, sortOrder
 }
