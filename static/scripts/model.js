@@ -1,8 +1,6 @@
 // model.js
 class Model {
-    constructor() {
-        // инициализация данных модели
-    }
+    constructor() {}
 
     // getPaths получает данные с сервера и создает элементы на странице
     async fetchNodes(sortField, sortOrder, path) {
@@ -16,14 +14,14 @@ class Model {
             })
             
             if (!response.ok) {
-                throw new Error('Ошибка. Данные не получены (статус не 200 OK). Причина:')
+                throw new Error('Данные не получены (статус не 200 OK).')
             }
             
             const data = await response.json()
     
-            // if (!data.serverIsSucceed) {
-            //     throw new Error('Ошибка. Данные получены (статус 200 OK), но они пусты. Причина: ' + data.serverErrorText)
-            // }
+            if (!data.serverIsSucceed) {
+                throw new Error('Данные получены (статус 200 OK), но они пусты. Причина: ' + data.serverErrorText)
+            }
     
             return data;
         } catch (error) {
@@ -31,13 +29,6 @@ class Model {
             throw error
         }
     }
-    
-
-    processData(data) {
-        // обработка полученных данных
-    }
-
-    // другие методы для работы с данными
 }
 
 export default Model;

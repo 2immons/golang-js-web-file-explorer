@@ -7,26 +7,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	fileprocessing "paths-getter/fileprocessing"
 	"time"
 )
 
-// структура элементов (файлов и директорий)
-type pathItems struct {
-	Name     string    // имя директории
-	Path     string    // путь к элементу (папке или директор)
-	ItemSize int64     // размер элемента
-	IsDir    bool      // является ли элемент директорией
-	EditDate time.Time // дата время последнего изменения
-}
-
-// структура элементов (файлов и директорий) переведенные в string формат для отправки на клиент
-type pathItemsForJson struct {
-	Name     string `json:"name"`     // имя директории
-	Path     string `json:"path"`     // путь к элементу (папке или директории)
-	ItemSize string `json:"itemSize"` // размер элемента
-	IsDir    string `json:"type"`     // является ли элемент директорией
-	EditDate string `json:"editDate"` // дата время последнего изменения
-}
+const configFilePath string = "config.json" // путь к файлу конфигураци
 
 type Config struct {
 	Port string `json:"port"` // порт сервера
@@ -39,14 +24,6 @@ type ResponseStruct struct {
 	LoadTime  float64     `json:"loadTime"`        // время отработки сервера
 }
 
-type Sort string
-
-const (
-	asc            Sort   = "asc"         // по возрастанию сортировка
-	desc           Sort   = "desc"        // по убыванию сортировка
-	configFilePath string = "config.json" // путь к файлу конфигураци
-)
-
 func main() {
 	// создание корневого контекста для программы с функцией отмены
 	ctx, cancel := context.WithCancel(context.Background())
@@ -56,11 +33,19 @@ func main() {
 	osSignalChan := make(chan os.Signal, 1)
 	signal.Notify(osSignalChan, os.Interrupt)
 
-	// ВОПРОС: через горутину или просто в конце?
+	// обработка паники в случае ошибки сервера
+	defer func() {
+		r := recover()
+		if r != nil {
+			fmt.Printf("Остановка сервера из-за паники: %v.", r)
+			cancel()
+		}
+	}()
+
 	// горутина закрытия приложения с отменой корневого контекста
 	go func() {
 		<-osSignalChan
-		fmt.Println("Получен сигнал остановки. Остановка сервера...")
+		fmt.Println("Получен сигнал остановки...")
 		cancel()
 	}()
 
@@ -93,20 +78,18 @@ func main() {
 			panic(err)
 		}
 
-		// обработка паники в случае ошибки сервера
-		defer func() {
-			err := recover()
-			if err != nil {
-				fmt.Printf("Остановка сервера из-за паники: %v.", err)
-				cancel()
-			}
-		}()
-
 		cancel()
 	}()
 
 	// блокировка программы до момента отмены контекста ctx;
 	<-ctx.Done()
+
+	// остановка сервера
+	fmt.Println("Остановка сервера...")
+	err = server.Shutdown(context.Background())
+	if err != nil {
+		fmt.Printf("Ошибка при остановке сервера %v\n", err)
+	}
 }
 
 // readConfigFromFile получает кофигурационные данные из соответствующего файла и возвращает их
@@ -148,9 +131,6 @@ func getPathsWithContext(ctx context.Context, h http.HandlerFunc) http.HandlerFu
 func getPaths(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 
-	requestCtx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
-	defer cancel()
-
 	response := ResponseStruct{
 		IsSucceed: true,
 		ErrorText: "",
@@ -161,8 +141,9 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	// получение параметров из запроса
 	srcPath, sortField, sortOrder := getRequestParams(r)
 
-	// создание сортированного среза элементов в заданной директории
-	pathsSlice, err := createSortedSliceOfPathItems(requestCtx, srcPath, sortField, sortOrder)
+	// получение отсортированного среза узлов файловой системы с информацией о них
+	// по заданному пути, полю сортировки и направлению
+	nodesSliceForJson, err := fileprocessing.GetNodesSliceForJson(srcPath, sortField, sortOrder)
 	if err != nil {
 		w.WriteHeader(http.StatusOK)
 		response.ErrorText = fmt.Sprintf("Ошибка при создании сортированного среза данных: %v", err)
@@ -182,44 +163,17 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	select {
-	case <-requestCtx.Done():
-		fmt.Println("Преывышено время ожидания.")
-		w.WriteHeader(http.StatusOK)
-		err := fmt.Errorf("превышено время ожидания обхода директории")
-		response.ErrorText = fmt.Sprintf("Ошибка при создании сортированного среза данных: %v", err)
-		response.IsSucceed = false
-		duration := float64(time.Since(startTime).Seconds())
-		response.LoadTime = duration
-		response.Nodes = "No data"
-
-		responseJsonFormat, err := json.Marshal(response)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			// как тут показывать ошибку?
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(responseJsonFormat)
-		return
-	default:
-	}
-
-	// создание нового среза элементов в заданной директории для дальнейшей конвертации в JSON формат
-	pathsSliceForJson := createConvertedPathsSliceForJson(pathsSlice)
-
 	// расчет времени выполнения работы функции
 	duration := float64(time.Since(startTime).Seconds())
 
 	// составление ответа на клиент
-	response.Nodes = pathsSliceForJson
+	response.Nodes = nodesSliceForJson
 	response.LoadTime = duration
 
 	// конвертация ответа на клиент в JSON формат
 	responseJsonFormat, err := json.Marshal(response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		// как тут показывать ошибку?
 		return
 	}
 

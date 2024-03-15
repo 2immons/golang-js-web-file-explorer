@@ -287,7 +287,7 @@ table {
     background-color: #e0e0e0
 }
 
-.path-list-section {
+.node-list-section {
     padding: 0px 0px 5px 0px;
     height: 500px;
 }
@@ -324,7 +324,7 @@ table {
     font-weight: 900;
 }
 
-.path-list__item {
+.node-list__item {
     display: grid;
     align-items: center;
     justify-content: space-between;
@@ -335,17 +335,17 @@ table {
     cursor: not-allowed;
 }
 
-.path-list__item_folder {
+.node-list__item_folder {
     transition: background-color 0.3s ease;
     cursor: pointer;
 }
 
-.path-list__item_folder:hover {
+.node-list__item_folder:hover {
     background-color: #e0e0e0;
     font-weight: 550;
 }
 
-.path-list__item__component {
+.node-list__item__component {
     padding: 0px 5px;
     display: flex;
     justify-content: left;

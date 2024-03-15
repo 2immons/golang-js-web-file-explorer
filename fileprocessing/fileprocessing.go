@@ -1,25 +1,52 @@
-package main
+package fileprocessing
 
 import (
-	"context"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"sync"
+	"time"
 )
 
-// createSortedSliceOfPathItems создает сортированный срез элементов в заданной директории
-func createSortedSliceOfPathItems(ctx context.Context, srcPath string, sortField string, sortOrder string) ([]pathItems, error) {
-	select {
-	case <-ctx.Done():
-		fmt.Println("Обход вернул nil, err")
-		err := fmt.Errorf("долго директория (из функции обхода)")
-		return nil, err
-	default:
-	}
+type Sort string
 
+const (
+	asc  Sort = "asc"  // по возрастанию сортировка
+	desc Sort = "desc" // по убыванию сортировка
+)
+
+// структура элементов (файлов и директорий)
+type nodeItem struct {
+	Name     string    // имя директории
+	Path     string    // путь к элементу (папке или директор)
+	ItemSize int64     // размер элемента
+	IsDir    bool      // является ли элемент директорией
+	EditDate time.Time // дата время последнего изменения
+}
+
+// структура элементов (файлов и директорий) переведенные в string формат для отправки на клиент
+type nodeItemForJson struct {
+	Name     string `json:"name"`     // имя директории
+	Path     string `json:"path"`     // путь к элементу (папке или директории)
+	ItemSize string `json:"itemSize"` // размер элемента
+	IsDir    string `json:"type"`     // является ли элемент директорией
+	EditDate string `json:"editDate"` // дата время последнего изменения
+}
+
+// GetNodesSliceForJson возвращает отсортированный срез узлов файловой системы с информацией о них
+func GetNodesSliceForJson(srcPath string, sortField string, sortOrder string) ([]nodeItemForJson, error) {
+	pathsSlice, err := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
+	if err != nil {
+		return nil, err
+	}
+	pathSliceForJson := createConvertedPathsSliceForJson(pathsSlice)
+	return pathSliceForJson, nil
+}
+
+// createSortedSliceOfPathItems создает сортированный срез элементов в заданной директории
+func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]nodeItem, error) {
 	if srcPath == "" {
 		currentDir, err := os.Getwd()
 		if err != nil {
@@ -37,7 +64,7 @@ func createSortedSliceOfPathItems(ctx context.Context, srcPath string, sortField
 	var wg sync.WaitGroup
 
 	// срез для элементов (dirEntries), находящихся в заданной директории
-	pathsSlice := make([]pathItems, len(dirEntries))
+	pathsSlice := make([]nodeItem, len(dirEntries))
 
 	// получение информации о каждом элементе (имя, размер, тип, время модификации) и запись в срез pathsSlice
 	for i, dirEntry := range dirEntries {
@@ -66,8 +93,8 @@ func createSortedSliceOfPathItems(ctx context.Context, srcPath string, sortField
 }
 
 // createConvertedPathsSliceForJson создает срез элементов в заданной директории для дальнейшей конвертации в JSON формат
-func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson {
-	pathsSliceForJson := make([]pathItemsForJson, len(pathsSlice))
+func createConvertedPathsSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
+	pathsSliceForJson := make([]nodeItemForJson, len(pathsSlice))
 
 	for i, value := range pathsSlice {
 		// замена bool на сооветствующее string элементов pathsSlice
@@ -77,7 +104,7 @@ func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson
 		}
 
 		// присвоение значений новому срезу
-		pathsSliceForJson[i] = pathItemsForJson{
+		pathsSliceForJson[i] = nodeItemForJson{
 			Name:     value.Name,
 			Path:     value.Path,
 			ItemSize: formatSize(value.ItemSize),
@@ -91,7 +118,7 @@ func createConvertedPathsSliceForJson(pathsSlice []pathItems) []pathItemsForJson
 
 // getDirEntryInfoAndWriteToSlice получает имя, размер, тип (файл или директория) и последнее время редактирования директории,
 // после чего добавляет эту информацию в срез pathSlice по своему уникальному индексу
-func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice []pathItems, index int) {
+func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice []nodeItem, index int) {
 	// получение путя от корневой директории до текущей папки или файла
 	currentPath := filepath.Join(srcPath, dirEntry.Name())
 
@@ -111,7 +138,7 @@ func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsS
 	absoluteDirPath := filepath.Join(srcPath, dirName)
 
 	// вставка данных в срез по индексу
-	(pathsSlice)[index] = pathItems{dirName, absoluteDirPath, itemSize, dirEntry.IsDir(), lastModifiedTime}
+	(pathsSlice)[index] = nodeItem{dirName, absoluteDirPath, itemSize, dirEntry.IsDir(), lastModifiedTime}
 }
 
 // getDirSize по заданному пути получает размер директории (файла или папки)
@@ -135,7 +162,7 @@ func getDirSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
 }
 
 // sortParths производит сортировку среза
-func sortPathsBySize(pathsSlice []pathItems, sortOrder string) {
+func sortPathsBySize(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
 			return pathsSlice[i].ItemSize > pathsSlice[j].ItemSize
@@ -147,7 +174,7 @@ func sortPathsBySize(pathsSlice []pathItems, sortOrder string) {
 	sort.Slice(pathsSlice, less)
 }
 
-func sortPathsByRelPath(pathsSlice []pathItems, sortOrder string) {
+func sortPathsByRelPath(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
 			return pathsSlice[i].Path < pathsSlice[j].Path
@@ -159,7 +186,7 @@ func sortPathsByRelPath(pathsSlice []pathItems, sortOrder string) {
 	sort.Slice(pathsSlice, less)
 }
 
-func sortPathsByType(pathsSlice []pathItems, sortOrder string) {
+func sortPathsByType(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
 			return pathsSlice[i].IsDir && !pathsSlice[j].IsDir
@@ -171,7 +198,7 @@ func sortPathsByType(pathsSlice []pathItems, sortOrder string) {
 	sort.Slice(pathsSlice, less)
 }
 
-func sortPathsByEditDate(pathsSlice []pathItems, sortOrder string) {
+func sortPathsByEditDate(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
 			return pathsSlice[i].EditDate.Before(pathsSlice[j].EditDate)

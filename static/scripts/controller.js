@@ -12,6 +12,11 @@ class Controller {
         this.ASC = 'asc'
         this.DESC = 'desc'
 
+        this.NAME = "name"
+        this.TYPE = "type"
+        this.DATE = "date"
+        this.SIZE = "size"
+
         this.defaultSortOrder = this.ASC
         this.defaultSortField = 'size'
 
@@ -20,9 +25,13 @@ class Controller {
         this.currentSortOrder = this.ASC
         this.currentPath = ''
 
-        this.backButton = document.getElementById("back-button");
-        this.homeButton = document.getElementById("home-button");
-        this.pathInput = document.getElementById("path");
+        this.backButton = document.getElementById("back-button")
+        this.homeButton = document.getElementById("home-button")
+        this.sortByNameButton = document.getElementById("sort-button-name")
+        this.sortByTypeButton = document.getElementById("sort-button-type")
+        this.sortBySizeButton = document.getElementById("sort-button-size")
+        this.sortByDateButton = document.getElementById("sort-button-date")
+        this.pathInput = document.getElementById("path")
 
         this.loadData(this.defaultSortField, this.defaultSortOrder, this.rootPath)
         this.initEventListeners()
@@ -34,10 +43,6 @@ class Controller {
         this.model.fetchNodes(sortField, sortOrder, path)
             .then(data => {
                 this.view.hideLoading()
-                if (!data.serverIsSucceed) {
-                    throw new Error('Ошибка. Данные получены (статус 200 OK), но они пусты. Причина: ' + data.serverErrorText)
-                }
-                console.log(data)
                 this.view.setLoadingTime(data.loadTime)
                 this.view.displayNodes(data.nodes)
                 if (path == "") {
@@ -46,6 +51,7 @@ class Controller {
                 this.view.setCurrentPathToInput(this.currentPath)
             })
             .catch(error => {
+                console.log(error)
                 this.view.hideLoading()
                 this.view.showError()
             })
@@ -67,50 +73,60 @@ class Controller {
         this.backButton.addEventListener("click", () => this.handleBackButtonClick())
         this.homeButton.addEventListener("click", () => this.handleHomeButtonClick())
         this.pathInput.addEventListener("keyup", (event) => this.handlePathInputKeyPress(event))
+
+        this.sortByNameButton.addEventListener("click", () => this.handleSortButtonClick(this.NAME))
+        this.sortByTypeButton.addEventListener("click", () => this.handleSortButtonClick(this.TYPE))
+        this.sortBySizeButton.addEventListener("click", () => this.handleSortButtonClick(this.SIZE))
+        this.sortByDateButton.addEventListener("click", () => this.handleSortButtonClick(this.DATE))
+    }
+
+    handleSortButtonClick(sortField) {
+        this.currentSortOrder === this.ASC ? (this.currentSortOrder = this.DESC) : (this.currentSortOrder = this.ASC)
+        this.loadData(sortField, this.currentSortOrder, this.currentPath)
     }
 
     handleNodeClick(node) {
         let dirName = node.firstElementChild.textContent
-        this.currentPath += dirName
+        if (this.currentPath.endsWith("/"))
+            this.currentPath += dirName
+        else
+            this.currentPath = this.currentPath + "/" + dirName
         this.view.setCurrentPathToInput(this.currentPath)
         this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath)
     }
 
     handleHomeButtonClick() {
+        if (this.currentPath === this.rootPath) {
+            return
+        }
         this.view.setCurrentPathToInput(this.rootPath)
         this.loadData(this.defaultSortField, this.defaultSortOrder, this.rootPath)
-        // if (os == WINDOWS) {
-        //     return pathArray[0] + "/"
-        // }
-        // else if (os == LINUX) {
-        //     return "/"
-        // }
     }
 
     handleBackButtonClick() { // TODO: переделать условия
         let pathArray = this.currentPath.split('/')
-        // если путь вида "dir" ('/'), то установка возврат
+        // если путь вида "dir" ('/'), то возврат
         if (this.currentPath.length <= 1) {
             return
         }
-        // если в Windows путь вида "ДИСК:/dir", то установка "ДИСК:/" 
+        // если путь вида "ДИСК:/", то возврат 
+        else if (pathArray.length < 2 || pathArray[1] == "") {
+            return
+        }
+        // если в путь вида "ДИСК:/dir", то установка "ДИСК:/" 
         else if (pathArray.length === 2) {
             this.currentPath = pathArray[0] + "/"
             this.view.setCurrentPathToInput(this.currentPath)
             this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath)
             return
         } 
-        // если в Windows путь вида "ДИСК:/", то возврат 
-        else if (pathArray.length < 2 || pathArray[1] == "") {
-            return
+        // во всех других случаях
+        else {
+            pathArray.pop()
+            this.currentPath = pathArray.join("/")
+            this.view.setCurrentPathToInput(this.currentPath)
+            this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath)
         }
-        // // если в Linux путь вида "/home", то возврат
-        // else if (os === LINUX && pathArray.length <= 2) {
-        //     currentPath = "/"
-        //     getPaths(defaultSortField, defaultSortOrder, currentPath)
-        //     this.setCurrentPathToInput()
-        //     return
-        // }
         this.view.setCurrentPathToInput(this.currentPath)
     }
 
