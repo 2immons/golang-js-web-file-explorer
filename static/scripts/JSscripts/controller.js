@@ -13,12 +13,12 @@ class Controller {
     constructor() {
         this.ASC = 'asc';
         this.DESC = 'desc';
-        this.NAME = 'name';
-        this.TYPE = 'type';
-        this.DATE = 'date';
-        this.SIZE = 'size';
+        this.NODE_NAME = 'name';
+        this.NODE_TYPE = 'type';
+        this.NODE_EDITDATE = 'date';
+        this.NODE_SIZE = 'size';
         this.defaultSortOrder = this.ASC;
-        this.defaultSortField = this.SIZE;
+        this.defaultSortField = this.NODE_SIZE;
         this.rootPath = "";
         this.currentSortOrder = this.ASC;
         this.currentPath = "";
@@ -78,16 +78,16 @@ class Controller {
             this.pathInput.addEventListener('keyup', (event) => this.handlePathInputKeyPress(event));
         }
         if (this.sortByNameButton) {
-            this.sortByNameButton.addEventListener('click', () => this.handleSortButtonClick(this.NAME));
+            this.sortByNameButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_NAME));
         }
         if (this.sortByTypeButton) {
-            this.sortByTypeButton.addEventListener('click', () => this.handleSortButtonClick(this.TYPE));
+            this.sortByTypeButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_TYPE));
         }
         if (this.sortBySizeButton) {
-            this.sortBySizeButton.addEventListener('click', () => this.handleSortButtonClick(this.SIZE));
+            this.sortBySizeButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_SIZE));
         }
         if (this.sortByDateButton) {
-            this.sortByDateButton.addEventListener('click', () => this.handleSortButtonClick(this.DATE));
+            this.sortByDateButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_EDITDATE));
         }
     }
     handleSortButtonClick(sortField) {

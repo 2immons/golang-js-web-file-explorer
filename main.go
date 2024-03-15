@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,10 +19,19 @@ type Config struct {
 }
 
 type ResponseStruct struct {
-	IsSucceed bool        `json:"serverIsSucceed"` // булевое значение верной отработки запроса
-	ErrorText string      `json:"serverErrorText"` // текст ошибки, если она есть
-	Nodes     interface{} `json:"nodes"`           // поле с данными, передаваемыми в запросе
-	LoadTime  float64     `json:"loadTime"`        // время отработки сервера
+	IsSucceed bool        `json:"serverIsSucceed"` // успешно ли обработан запрос
+	ErrorText string      `json:"serverErrorText"` // текст ошибки
+	Nodes     interface{} `json:"nodes"`           // вхождения в заданную запросом директорию
+	LoadTime  float64     `json:"loadTime"`        // время обработки запроса
+}
+
+type RequestStruct struct {
+	IsSucceed   bool      `json:"serverIsSucceed"` // успешно ли отправлен запрос
+	ErrorText   string    `json:"serverErrorText"` // текст ошибки
+	TotalSize   int64     `json:"totalSize"`       // общий вес всех директорий
+	LoadTime    float64   `json:"loadTime"`        // время обработки запроса
+	RequestDate time.Time `json:"date"`            // дата и время обработки
+	SrcPath     string    `json:"path"`            // корневой путь обработки
 }
 
 func main() {
@@ -49,7 +59,7 @@ func main() {
 		cancel()
 	}()
 
-	config, err := readConfigFromFile(configFilePath)
+	serverConfig, err := readConfigFromFile(configFilePath)
 	if err != nil {
 		fmt.Printf("Ошибка загрузки конфигурационных данных: %v\n", err)
 		return
@@ -57,9 +67,11 @@ func main() {
 
 	// инициализации сервера
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%s", config.Port),
+		Addr:    fmt.Sprintf(":%s", serverConfig.Port),
 		Handler: http.DefaultServeMux,
 	}
+
+	// TODO: POST запрос
 
 	/*
 		без StripPrefix("/static/") не дает загрузить script.js:
@@ -72,7 +84,7 @@ func main() {
 
 	// горутина запуска сервера
 	go func() {
-		fmt.Printf("Запуск сервера на http://localhost:%s ...\n", config.Port)
+		fmt.Printf("Запуск сервера на http://localhost:%s ...\n", serverConfig.Port)
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
 			panic(err)
@@ -143,7 +155,7 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 
 	// получение отсортированного среза узлов файловой системы с информацией о них
 	// по заданному пути, полю сортировки и направлению
-	nodesSliceForJson, err := fileprocessing.GetNodesSliceForJson(srcPath, sortField, sortOrder)
+	nodesSliceForJson, totalSize, err := fileprocessing.GetNodesSliceForJson(srcPath, sortField, sortOrder)
 	if err != nil {
 		w.WriteHeader(http.StatusOK)
 		response.ErrorText = fmt.Sprintf("Ошибка при создании сортированного среза данных: %v", err)
@@ -181,4 +193,42 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseJsonFormat)
+
+	url := "http://localhost:80/index.php"
+
+	data := RequestStruct{
+		IsSucceed:   true,
+		ErrorText:   "",
+		TotalSize:   totalSize,
+		LoadTime:    duration,
+		RequestDate: time.Now(),
+		SrcPath:     srcPath,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+
+	client := &http.Client{}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return
+	}
+
+	req.Header.Set("Content-Type", "applicaton/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		fmt.Println(1)
+	} else if resp.StatusCode == 404 {
+		fmt.Println(2)
+	}
 }

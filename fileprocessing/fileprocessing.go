@@ -41,13 +41,14 @@ type nodeItemForJson struct {
 }
 
 // GetNodesSliceForJson возвращает для маршалинга отсортированный срез срез вхождений в заданную директорию с информацией о них
-func GetNodesSliceForJson(srcPath string, sortField string, sortOrder string) ([]nodeItemForJson, error) {
+func GetNodesSliceForJson(srcPath string, sortField string, sortOrder string) ([]nodeItemForJson, int64, error) {
 	pathsSlice, err := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+	totalSize := getTotalSize(pathsSlice)
 	pathSliceForJson := createConvertedPathsSliceForJson(pathsSlice)
-	return pathSliceForJson, nil
+	return pathSliceForJson, totalSize, nil
 }
 
 // createSortedSliceOfPathItems создает сортированный срез вхождений в заданную директорию
@@ -263,4 +264,12 @@ func calculateFolderSize(folderPath string) (int64, error) {
 	})
 
 	return size, err
+}
+
+func getTotalSize(pathsSlice []nodeItem) int64 {
+	var totalSize int64 = 0
+	for _, node := range pathsSlice {
+		totalSize += node.ItemSize
+	}
+	return totalSize
 }
