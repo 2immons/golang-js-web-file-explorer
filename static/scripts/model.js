@@ -2,7 +2,6 @@
 class Model {
     constructor() {}
 
-    // getPaths получает данные с сервера и создает элементы на странице
     async fetchNodes(sortField, sortOrder, path) {
         const url = `/paths?sortField=${encodeURIComponent(sortField)}&sortOrder=${encodeURIComponent(sortOrder)}&path=${encodeURIComponent(path)}`
         try {

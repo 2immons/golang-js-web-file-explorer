@@ -8,6 +8,7 @@ class Controller {
         this.view = new View(this);
     }
 
+    // иницииализация приложения
     init() {
         this.ASC = 'asc'
         this.DESC = 'desc'
@@ -46,7 +47,7 @@ class Controller {
                 this.view.setLoadingTime(data.loadTime)
                 this.view.displayNodes(data.nodes)
                 if (path == "") {
-                    this.calculateRootPath(data.nodes[0].path)
+                    this.calculateAndSetRootPath(data.nodes[0].path)
                 }
                 this.view.setCurrentPathToInput(this.currentPath)
             })
@@ -57,7 +58,8 @@ class Controller {
             })
     }
 
-    calculateRootPath(path) {
+    // calculateRootPath рассчитывает и устанавливает корневую директорию
+    calculateAndSetRootPath(path) {
         if (path[0] == "/") {
             this.currentPath = this.rootPath = "/"
             this.view.setCurrentPathToInput(this.currentPath)
@@ -80,11 +82,14 @@ class Controller {
         this.sortByDateButton.addEventListener("click", () => this.handleSortButtonClick(this.DATE))
     }
 
+    // вызывает метод загрузки данных с обновленным порядком сортировки и по заданному кнопкой сортировки полю
     handleSortButtonClick(sortField) {
         this.currentSortOrder === this.ASC ? (this.currentSortOrder = this.DESC) : (this.currentSortOrder = this.ASC)
         this.loadData(sortField, this.currentSortOrder, this.currentPath)
     }
 
+    // обновляет текущий путь в зависимости от директории, в которую пользователь хочет перейти,
+    // и вызывает метод загрузки данных
     handleNodeClick(node) {
         let dirName = node.firstElementChild.textContent
         if (this.currentPath.endsWith("/"))
@@ -95,6 +100,7 @@ class Controller {
         this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath)
     }
 
+    // устанавливает текущий путь равным корневому и вызывает метод загрузки данных
     handleHomeButtonClick() {
         if (this.currentPath === this.rootPath) {
             return
@@ -103,6 +109,7 @@ class Controller {
         this.loadData(this.defaultSortField, this.defaultSortOrder, this.rootPath)
     }
 
+    // устанавливает текущий путь на 1 уровень выше и вызывает метод загрузки данных
     handleBackButtonClick() { // TODO: переделать условия
         let pathArray = this.currentPath.split('/')
         // если путь вида "dir" ('/'), то возврат
@@ -130,6 +137,7 @@ class Controller {
         this.view.setCurrentPathToInput(this.currentPath)
     }
 
+    // устанавливает текущий путь равным введенному пользователю значению
     handlePathInputKeyPress(event) {
         if (event.key === "Enter") {
             let inputValue = this.pathInput.value;
@@ -138,103 +146,6 @@ class Controller {
             this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath)
         }
     }
-
-    handleAddButtonClick() {
-        // реализация обработчика нажатия кнопки "добавить"
-    }
-
-    // другие методы для обработки действий пользователя
 }
 
 export default Controller;
-
-
-
-// import view from "./view.js"
-
-// // sortTable обрабатывает нажатие кнопки сортировки (определяет порядок)
-// function sortTable(sortField) {
-//     const sortOrder = currentSortOrder === ASC ? (currentSortOrder = DESC) : (currentSortOrder = ASC)
-//     getPaths(sortField, sortOrder, currentPath)
-// };
-
-// // устанавливает значение текущего пути на 1 уровень выше
-// let backButton = document.getElementById("back-button")
-// backButton.addEventListener("onclick", function () {
-//     let pathArray = currentPath.split('/')
-
-//     // если путь вида "dir" ('/'), то установка возврат
-//     if (currentPath.length <= 1) {
-//         return
-//     // если в Windows путь вида "ДИСК:/dir", то установка "ДИСК:/"
-//     } else if (os === WINDOWS && pathArray.length === 2) {
-//         currentPath = pathArray[0] + "/"
-//         getPaths(defaultSortField, defaultSortOrder, currentPath)
-//         setCurrentPathToInput()
-//         return
-//     } 
-//     // если в Windows путь вида "ДИСК:/", то возврат
-//     else if (os === WINDOWS && pathArray.length < 2) {
-//         return
-//     }
-//     // если в Linux путь вида "/home", то возврат
-//     else if (os === LINUX && pathArray.length <= 2) {
-//         currentPath = "/"
-//         getPaths(defaultSortField, defaultSortOrder, currentPath)
-//         setCurrentPathToInput()
-//         return
-//     }
-
-//     // удаление последнего составляющее пути и соединение его обратно в строку
-//     pathArray.pop()
-//     currentPath = pathArray.join('/')
-
-//     getPaths(defaultSortField, defaultSortOrder, currentPath)
-//     setCurrentPathToInput()   
-// });
-
-// document.addEventListener("click", function() {
-//     let nodesParts = document.querySelectorAll('.path-list__item__component');
-
-//     nodesParts.forEach(function(nodePart) {
-//         nodePart.addEventListener("click", function() {
-//             // Получаем родителя элемента
-//             var fileSystemNode = nodePart.parentNode;
-//             var firstChildNodePart = fileSystemNode.firstElementChild;
-            
-//             setNewPath(firstChildNodePart.innerText)
-//         });
-//     });
-// });
-
-       
-// // setPreviousPath устанавливает значение текущего пути в зависимости от директории, в которую пользователь перешел
-// function setNewPath(dir) {
-//     console.log(currentPath)
-//     if (currentPath.endsWith("/")) {
-//         currentPath += dir
-//     } else {
-//         currentPath = currentPath + '/' + dir
-//     }
-    
-//     Model.getPaths(defaultSortField, defaultSortOrder, currentPath)
-//     View.setCurrentPathToInput()
-// };
-
-// // setPreviousPath устанавливает значение текущего пути заданному в поиске
-// function setNewPathByInput(event) {
-//     if (event.key === "Enter") {
-//         let inputValue = document.getElementById("path").value
-
-//         // TODO: проверка на валидность пути через регулярные выражения?
-//         // if (inputValue.charAt(inputValue.length - 1) === "/") {
-//         //     inputValue = inputValue.slice(0, -1)
-//         // }
-
-//         currentPath = inputValue
-//         getPaths(defaultSortField, defaultSortOrder, currentPath)
-//         setCurrentPathToInput()
-//     }
-// };
-
-// export default {sortTable, setPreviousPath, setNewPath, setNewPathByInput}

@@ -8,14 +8,14 @@ class View {
         this.pathInput = document.getElementById('path')
     }
 
-    // clearPathList удаляет все пути из списка
+    // удаляет все узлы файловой системы из DOM
     clearNodes() {
         while (this.nodeList.firstChild) {
             this.nodeList.removeChild(this.nodeList.firstChild);
         }
     }
 
-    // createNewElements отрисовывает полученные с сервера пути в качестве потомков списка
+    // отрисовывает полученные с сервера узлы файловой системы
     displayNodes(nodes) {
         this.clearNodes()
 
@@ -29,7 +29,7 @@ class View {
                 newNode.addEventListener("click", () => this.controller.handleNodeClick(newNode))
             }
 
-            // инициализация составляющих информации о пути: название, тип, размер и дату редактирования
+            // инициализация компонентов информации об узле: название, тип, размер и дату редактирования
             const nodeComponents = [
                 { text: node.name, class: 'node-list__item__component' },
                 { text: node.type, class: 'node-list__item__component' },
@@ -37,7 +37,7 @@ class View {
                 { text: node.editDate, class: 'node-list__item__component' }
             ]
 
-            // отрисовка каждого такого составляющего в качестве потомка соответствующего ему пути
+            // отрисовка каждого такого компонента в качестве потомка соответствующего ему узла
             nodeComponents.forEach(element => {
                 let newComponent = document.createElement('div')
                 newComponent.textContent = element.text
@@ -45,7 +45,7 @@ class View {
                 newNode.appendChild(newComponent)
             })
 
-            // добавление созданного элемента пути в список
+            // добавление созданного узла в список
             this.nodeList.appendChild(newNode)
         })
     }
@@ -70,6 +70,7 @@ class View {
         this.loadingDiv.style.display = 'none'
     }
 
+    // отрисовывает текущий путь в поле интрфейса ввода пути
     setCurrentPathToInput(path) {
         this.pathInput.value = path
     }
