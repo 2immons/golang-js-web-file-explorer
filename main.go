@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	fileprocessing "paths-getter/fileprocessing"
+	fileprocessing "paths-getter/server/fileprocessing"
 	"time"
 )
 
-const configFilePath string = "config.json" // путь к файлу конфигураци
+const configFilePath string = "server/server.config.json" // путь к файлу конфигураци
 
-type Config struct {
+type ServerConfig struct {
 	Port string `json:"port"` // порт сервера
 }
 
@@ -31,7 +31,7 @@ type RequestStruct struct {
 	TotalSize   int64     `json:"totalSize"`       // общий вес всех директорий
 	LoadTime    float64   `json:"loadTime"`        // время обработки запроса
 	RequestDate time.Time `json:"date"`            // дата и время обработки
-	SrcPath     string    `json:"path"`            // корневой путь обработки
+	RootPath    string    `json:"path"`            // корневой путь обработки
 }
 
 func main() {
@@ -71,16 +71,14 @@ func main() {
 		Handler: http.DefaultServeMux,
 	}
 
-	// TODO: POST запрос
+	// путь к style.css и .js файлам
+	http.Handle("/src/", http.StripPrefix("/src/", http.FileServer(http.Dir("./src"))))
+	http.Handle("/src/JSscripts/", http.StripPrefix("/src/JSscripts/", http.FileServer(http.Dir("./src/JSscripts"))))
 
-	/*
-		без StripPrefix("/static/") не дает загрузить script.js:
-		Refused to execute script from 'http://localhost:8324/static/script.js' because its MIME type ('text/plain'), because...
-	*/
-	staticFilesDir := http.Dir("./static")
+	// путь к index.html
+	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./public"))))
 
-	http.Handle("/", http.StripPrefix("/static/", http.FileServer(staticFilesDir)))
-	http.HandleFunc("/paths", getPathsWithContext(ctx, getPaths))
+	http.HandleFunc("/nodes", handleGetNodesRequestWithContext(ctx, handleGetNodesRequest))
 
 	// горутина запуска сервера
 	go func() {
@@ -105,8 +103,8 @@ func main() {
 }
 
 // readConfigFromFile получает кофигурационные данные из соответствующего файла и возвращает их
-func readConfigFromFile(configFilePath string) (Config, error) {
-	var config Config
+func readConfigFromFile(configFilePath string) (ServerConfig, error) {
+	var config ServerConfig
 	configFileContent, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return config, err
@@ -128,19 +126,17 @@ func getRequestParams(r *http.Request) (string, string, string) {
 	return srcPath, sortField, sortOrder
 }
 
-// ОБРАБОТЧКИ (func handlers):
-
-// getPathsWithContext представляет из себя мидлвар для передачи контекста из main в getPaths
-func getPathsWithContext(ctx context.Context, h http.HandlerFunc) http.HandlerFunc {
+// handleGetNodesRequestWithContext представляет из себя мидлвар для передачи контекста из main в getPaths
+func handleGetNodesRequestWithContext(ctx context.Context, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		h(w, r.WithContext(ctx))
 	}
 }
 
-// getPaths совершает обход директорий по указанному в запросе пути,
+// handleGetNodesRequest совершает обход директорий по указанному в запросе пути,
 // получает информацию (имя, размер, тип: файл или папка и дата модификации) о каждом входящем в указанную директорию элементе (папке или файле)
 // и отправляет её в формате JSON
-func getPaths(w http.ResponseWriter, r *http.Request) {
+func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 
 	response := ResponseStruct{
@@ -176,11 +172,11 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// расчет времени выполнения работы функции
-	duration := float64(time.Since(startTime).Seconds())
+	loadTime := float64(time.Since(startTime).Seconds())
 
 	// составление ответа на клиент
 	response.Nodes = nodesSliceForJson
-	response.LoadTime = duration
+	response.LoadTime = loadTime
 
 	// конвертация ответа на клиент в JSON формат
 	responseJsonFormat, err := json.Marshal(response)
@@ -194,25 +190,25 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseJsonFormat)
 
-	url := "http://localhost:80/index.php"
+	apacheURL := "http://localhost:80/index.php"
 
-	data := RequestStruct{
+	requestData := RequestStruct{
 		IsSucceed:   true,
 		ErrorText:   "",
 		TotalSize:   totalSize,
-		LoadTime:    duration,
+		LoadTime:    loadTime,
 		RequestDate: time.Now(),
-		SrcPath:     srcPath,
+		RootPath:    srcPath,
 	}
 
-	jsonData, err := json.Marshal(data)
+	jsonRequestData, err := json.Marshal(requestData)
 	if err != nil {
 		return
 	}
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", apacheURL, bytes.NewBuffer(jsonRequestData))
 	if err != nil {
 		return
 	}
