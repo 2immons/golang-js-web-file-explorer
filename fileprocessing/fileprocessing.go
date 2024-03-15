@@ -15,6 +15,11 @@ type Sort string
 const (
 	asc  Sort = "asc"  // по возрастанию сортировка
 	desc Sort = "desc" // по убыванию сортировка
+
+	size    Sort = "size" // размер директории
+	name    Sort = "name" // имя директори
+	dirType Sort = "type" // тип директории
+	date    Sort = "date" // дата модификации директории
 )
 
 // структура элементов (файлов и директорий)
@@ -35,7 +40,7 @@ type nodeItemForJson struct {
 	EditDate string `json:"editDate"` // дата время последнего изменения
 }
 
-// GetNodesSliceForJson возвращает отсортированный срез узлов файловой системы с информацией о них
+// GetNodesSliceForJson возвращает для маршалинга отсортированный срез срез вхождений в заданную директорию с информацией о них
 func GetNodesSliceForJson(srcPath string, sortField string, sortOrder string) ([]nodeItemForJson, error) {
 	pathsSlice, err := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
 	if err != nil {
@@ -45,7 +50,7 @@ func GetNodesSliceForJson(srcPath string, sortField string, sortOrder string) ([
 	return pathSliceForJson, nil
 }
 
-// createSortedSliceOfPathItems создает сортированный срез элементов в заданной директории
+// createSortedSliceOfPathItems создает сортированный срез вхождений в заданную директорию
 func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]nodeItem, error) {
 	if srcPath == "" {
 		currentDir, err := os.Getwd()
@@ -55,7 +60,7 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 		srcPath = filepath.Join(filepath.VolumeName(filepath.Clean(currentDir)), "/")
 	}
 
-	// обход заданной директории
+	// получение вхождений в заданную директрию
 	dirEntries, err := os.ReadDir(srcPath)
 	if err != nil {
 		return nil, err
@@ -63,36 +68,46 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 
 	var wg sync.WaitGroup
 
-	// срез для элементов (dirEntries), находящихся в заданной директории
+	// срез для вхождений (dirEntries) в заданную директорию
 	pathsSlice := make([]nodeItem, len(dirEntries))
 
-	// получение информации о каждом элементе (имя, размер, тип, время модификации) и запись в срез pathsSlice
+	// получение информации о каждом вхождении (имя, размер, тип, время модификации) и запись в срез pathsSlice
 	for i, dirEntry := range dirEntries {
 		wg.Add(1)
 		go func(index int, dirEntry os.DirEntry) {
 			defer wg.Done()
 			// текущий index передается внутрь замыкания, чтобы каждая горутина использовала свой уникальный индекс
-			getDirEntryInfoAndWriteToSlice(srcPath, dirEntry, pathsSlice, index)
+			err = getDirEntryInfoAndWriteToSlice(srcPath, dirEntry, pathsSlice, index)
+			if err != nil {
+				fmt.Println(err)
+			}
 		}(i, dirEntry)
 	}
-
-	// ожидание всех горутин обхода
 	wg.Wait()
 
+	// удаление из среза вхождений, у которых пустое поле имени (т.е. к которым недостаточно доступа)
+	var cleanedPathsSlice []nodeItem
+	for _, path := range pathsSlice {
+		if path.Name != "" {
+			cleanedPathsSlice = append(cleanedPathsSlice, path)
+		}
+	}
+	pathsSlice = cleanedPathsSlice
+
 	// вызов функций сортировки среза pathSlice в зависимости от поля сортировки
-	if sortField == "size" {
+	if sortField == string(size) {
 		sortPathsBySize(pathsSlice, sortOrder)
-	} else if sortField == "name" {
-		sortPathsByRelPath(pathsSlice, sortOrder)
-	} else if sortField == "type" {
+	} else if sortField == string(name) {
+		sortPathsByName(pathsSlice, sortOrder)
+	} else if sortField == string(dirType) {
 		sortPathsByType(pathsSlice, sortOrder)
-	} else if sortField == "date" {
+	} else if sortField == string(date) {
 		sortPathsByEditDate(pathsSlice, sortOrder)
 	}
 	return pathsSlice, nil
 }
 
-// createConvertedPathsSliceForJson создает срез элементов в заданной директории для дальнейшей конвертации в JSON формат
+// createConvertedPathsSliceForJson из полученного среза вхождений создает новый срез вхождений, подходящий для маршалинга
 func createConvertedPathsSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
 	pathsSliceForJson := make([]nodeItemForJson, len(pathsSlice))
 
@@ -117,28 +132,31 @@ func createConvertedPathsSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
 }
 
 // getDirEntryInfoAndWriteToSlice получает имя, размер, тип (файл или директория) и последнее время редактирования директории,
-// после чего добавляет эту информацию в срез pathSlice по своему уникальному индексу
-func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice []nodeItem, index int) {
-	// получение путя от корневой директории до текущей папки или файла
+// после чего добавляет эту информацию в срез вхождений pathSlice по своему уникальному индексу
+func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice []nodeItem, index int) error {
+	// получение пути от корневой директории до текущей папки или файла
 	currentPath := filepath.Join(srcPath, dirEntry.Name())
 
 	// получение размера файла или директории по заданному пути
 	itemSize, err := getDirSize(currentPath, dirEntry)
 	if err != nil {
-		return
+		return err
 	}
 
+	// получение даты и времени последней модификации директории
 	fileInfo, err := dirEntry.Info()
 	if err != nil {
-		return
+		return err
 	}
-
 	lastModifiedTime := fileInfo.ModTime()
+
+	// получение имени директори и абсолютного пути
 	dirName := dirEntry.Name()
 	absoluteDirPath := filepath.Join(srcPath, dirName)
 
 	// вставка данных в срез по индексу
 	(pathsSlice)[index] = nodeItem{dirName, absoluteDirPath, itemSize, dirEntry.IsDir(), lastModifiedTime}
+	return nil
 }
 
 // getDirSize по заданному пути получает размер директории (файла или папки)
@@ -161,7 +179,7 @@ func getDirSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
 	}
 }
 
-// sortParths производит сортировку среза
+// sortParths производит сортировку среза по размеру директории
 func sortPathsBySize(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
@@ -174,18 +192,20 @@ func sortPathsBySize(pathsSlice []nodeItem, sortOrder string) {
 	sort.Slice(pathsSlice, less)
 }
 
-func sortPathsByRelPath(pathsSlice []nodeItem, sortOrder string) {
+// sortParths производит сортировку среза по имени директории
+func sortPathsByName(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
-			return pathsSlice[i].Path < pathsSlice[j].Path
+			return pathsSlice[i].Name < pathsSlice[j].Name
 		} else {
-			return pathsSlice[i].Path > pathsSlice[j].Path
+			return pathsSlice[i].Name > pathsSlice[j].Name
 		}
 	}
 
 	sort.Slice(pathsSlice, less)
 }
 
+// sortParths производит сортировку среза по типу директории
 func sortPathsByType(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
@@ -198,6 +218,7 @@ func sortPathsByType(pathsSlice []nodeItem, sortOrder string) {
 	sort.Slice(pathsSlice, less)
 }
 
+// sortParths производит сортировку среза по дате модификации директории
 func sortPathsByEditDate(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
@@ -210,7 +231,7 @@ func sortPathsByEditDate(pathsSlice []nodeItem, sortOrder string) {
 	sort.Slice(pathsSlice, less)
 }
 
-// formatSize переводит размер из байт в удобный вид (Кб, Мб)
+// formatSize переводит размер из байт в читабельный вид (Кб, Мб, Гб)
 func formatSize(size int64) string {
 	const kb = 1024
 	const mb = 1024 * kb
