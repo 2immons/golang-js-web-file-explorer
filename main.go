@@ -35,7 +35,7 @@ type Config struct {
 type ResponseStruct struct {
 	IsSucceed bool        `json:"serverIsSucceed"` // булевое значение верной отработки запроса
 	ErrorText string      `json:"serverErrorText"` // текст ошибки, если она есть
-	Data      interface{} `json:"serverData"`      // поле с данными, передаваемыми в запросе
+	Nodes     interface{} `json:"nodes"`           // поле с данными, передаваемыми в запросе
 	LoadTime  float64     `json:"loadTime"`        // время отработки сервера
 }
 
@@ -154,7 +154,7 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	response := ResponseStruct{
 		IsSucceed: true,
 		ErrorText: "",
-		Data:      "",
+		Nodes:     "",
 		LoadTime:  0,
 	}
 
@@ -169,7 +169,7 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 		response.IsSucceed = false
 		duration := float64(time.Since(startTime).Seconds())
 		response.LoadTime = duration
-		response.Data = "No data"
+		response.Nodes = "No data"
 
 		responseJsonFormat, err := json.Marshal(response)
 		if err != nil {
@@ -191,7 +191,7 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 		response.IsSucceed = false
 		duration := float64(time.Since(startTime).Seconds())
 		response.LoadTime = duration
-		response.Data = "No data"
+		response.Nodes = "No data"
 
 		responseJsonFormat, err := json.Marshal(response)
 		if err != nil {
@@ -212,7 +212,7 @@ func getPaths(w http.ResponseWriter, r *http.Request) {
 	duration := float64(time.Since(startTime).Seconds())
 
 	// составление ответа на клиент
-	response.Data = pathsSliceForJson
+	response.Nodes = pathsSliceForJson
 	response.LoadTime = duration
 
 	// конвертация ответа на клиент в JSON формат
