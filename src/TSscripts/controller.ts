@@ -63,7 +63,7 @@ class Controller {
 
             const data = await this.model.fetchStats();
 
-            // отображение
+            this.view.displayStatTable(data);
         } catch (error) {
             console.log(error);
 

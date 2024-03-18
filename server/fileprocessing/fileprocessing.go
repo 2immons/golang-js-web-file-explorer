@@ -86,15 +86,6 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 	}
 	wg.Wait()
 
-	// удаление из среза вхождений, у которых пустое поле имени (т.е. к которым недостаточно доступа)
-	var cleanedPathsSlice []nodeItem
-	for _, path := range pathsSlice {
-		if path.Name != "" {
-			cleanedPathsSlice = append(cleanedPathsSlice, path)
-		}
-	}
-	pathsSlice = cleanedPathsSlice
-
 	// вызов функций сортировки среза pathSlice в зависимости от поля сортировки
 	if sortField == string(size) {
 		sortPathsBySize(pathsSlice, sortOrder)
@@ -113,6 +104,18 @@ func createConvertedPathsSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
 	pathsSliceForJson := make([]nodeItemForJson, len(pathsSlice))
 
 	for i, value := range pathsSlice {
+		// если имя вхождения пустое, присвоение строк с сообщением об ошибке доступа
+		if value.Name == "" {
+			pathsSliceForJson[i] = nodeItemForJson{
+				Name:     "Ошибка доступа",
+				Path:     "Ошибка доступа",
+				ItemSize: "Ошибка доступа",
+				IsDir:    "Ошибка доступа",
+				EditDate: "Ошибка доступа",
+			}
+			continue
+		}
+
 		// замена bool на сооветствующее string элементов pathsSlice
 		isDirValue := "Файл"
 		if value.IsDir {

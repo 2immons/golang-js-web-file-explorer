@@ -36,7 +36,7 @@ class Model {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'text/html'
                 }
             });
             
@@ -44,11 +44,7 @@ class Model {
                 throw new Error('Данные не получены (статус не 200 OK).');
             }
             
-            const data = await response.json();
-    
-            if (!data.serverIsSucceed) {
-                throw new Error('Данные получены (статус 200 OK), но они пусты. Причина: ' + data.serverErrorText);
-            }
+            const data = await response.text();
     
             return data;
         } catch (error) {

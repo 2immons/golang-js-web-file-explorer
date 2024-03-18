@@ -14,6 +14,7 @@ class View {
     private errorDiv: HTMLElement | null = document.querySelector('.error-data-not-found');
     private loadingDiv: HTMLElement | null = document.querySelector('.loading-data');
     private pathInput = document.getElementById('path') as HTMLInputElement;
+    private tableContainer = document.getElementById('table-container') as HTMLInputElement;
 
     constructor(controller: Controller) {
         this.controller = controller;
@@ -25,6 +26,12 @@ class View {
             while (this.nodeList.firstChild) {
                 this.nodeList.removeChild(this.nodeList.firstChild);
             }
+        }
+    }
+
+    displayStatTable(data: string) {
+        if (this.tableContainer) {
+            this.tableContainer.innerHTML = data;
         }
     }
 
