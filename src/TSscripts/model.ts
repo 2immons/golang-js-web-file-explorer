@@ -31,16 +31,18 @@ class Model {
 
     // fetchStats получает данные с сервера Apache о статистике: зависимость времени загрузки от объема
     async fetchStats(): Promise<any> {
-        const url = `http://localhost:80/index.php`
+        const url = `http://localhost:80/statGet.php`
         try {
             const response = await fetch(url, {
                 method: 'GET',
+                mode: "no-cors",
                 headers: {
-                    'Content-Type': 'text/html'
+                    'Accept': 'text/html'
                 }
             });
             
             if (!response.ok) {
+                console.log(response.status)
                 throw new Error('Данные не получены (статус не 200 OK).');
             }
             

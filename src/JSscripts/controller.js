@@ -62,7 +62,7 @@ class Controller {
             try {
                 // сокрытие ошибок, загрузка
                 const data = yield this.model.fetchStats();
-                // отображение
+                this.view.displayStatTable(data);
             }
             catch (error) {
                 console.log(error);

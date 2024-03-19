@@ -1,11 +1,16 @@
 <?php
+// установка заголовков
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Origin: Content-Type");
+
 // проверка, что пришел POST запрос
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // подключение к базе данных
     $servername = "localhost";
-    $username = "username";
-    $password = "password";
+    $username = "root";
+    $password = "Orig195025";
     $dbname = "statDB";
 
     $conn = new mysqli($servername, $username, $password, $dbname);
@@ -20,7 +25,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // подготовка SQL запроса для вставки в таблицу
     $sql = "INSERT INTO stat (total_size, date_time, root_path, load_time_seconds) VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("isss", $data['TotalSize'], $data['RequestDate'], $data['RootPath'], $data['LoadTime']);
+    $stmt->bind_param("isss", $data['totalSize'], $data['date'], $data['path'], $data['loadTime']);
     
     // выполнение SQL запроса
     $stmt->execute();

@@ -4,6 +4,7 @@ class View {
         this.errorDiv = document.querySelector('.error-data-not-found');
         this.loadingDiv = document.querySelector('.loading-data');
         this.pathInput = document.getElementById('path');
+        this.tableContainer = document.getElementById('table-container');
         this.controller = controller;
     }
     // clearNodes удаляет все пути из списка
@@ -12,6 +13,11 @@ class View {
             while (this.nodeList.firstChild) {
                 this.nodeList.removeChild(this.nodeList.firstChild);
             }
+        }
+    }
+    displayStatTable(data) {
+        if (this.tableContainer) {
+            this.tableContainer.innerHTML = data;
         }
     }
     // displayNodes отрисовывает полученные с сервера пути в качестве потомков списка

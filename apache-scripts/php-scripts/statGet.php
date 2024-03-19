@@ -1,10 +1,15 @@
 <?php
+// установка заголовков
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+
 // проверка, что пришел GET запрос
 if ($_SERVER["REQUEST_METHOD"] == "GET") {
     // подключение к базе данных
     $servername = "localhost";
-    $username = "username";
-    $password = "password";
+    $username = "root";
+    $password = "Orig195025";
     $dbname = "statDB";
 
     $conn = new mysqli($servername, $username, $password, $dbname);
@@ -19,13 +24,13 @@ if ($_SERVER["REQUEST_METHOD"] == "GET") {
     $query_result = $conn->query($sql);
 
     // формирование HTML таблицы на основе данных из базы данных
-    $table = "<table border='1'>
+    $table = "<table border='2'>
         <tr>
-            <th>ID</th>
-            <th>Total Size</th>
-            <th>Date Time</th>
-            <th>Root Path</th>
-            <th>Load Time</th>
+            <th>№</th>
+            <th>Размер</th>
+            <th>Дата,время</th>
+            <th>Путь</th>
+            <th>Время</th>
         </tr>";
     if ($query_result->num_rows > 0) {
         while($row = $query_result->fetch_assoc()) {
@@ -49,10 +54,13 @@ if ($_SERVER["REQUEST_METHOD"] == "GET") {
     header("Content-Type: text/html");
 
     // вывод таблицы HTML
+    http_response_code(200);
+    header("Access-Control-Allow-Origin: *");
     echo $table;
 } else {
     // если запрос не GET, отправка сообщения об ошибке
     http_response_code(405);
-    echo "Некорректный запрос (неверный тип, ожидался GET)";
+    header("Content-Type:  application/json");
+    echo json_encode(array('message' => "Ошибка запроса PHP"));
 }
 ?>

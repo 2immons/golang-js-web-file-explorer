@@ -190,7 +190,7 @@ func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseJsonFormat)
 
-	apacheURL := "http://localhost:80/index.php"
+	apacheURL := "http://localhost:80/statPost.php"
 
 	requestData := RequestStruct{
 		IsSucceed:   true,
