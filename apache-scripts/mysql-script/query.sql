@@ -1,11 +1,11 @@
 CREATE DATABASE IF NOT EXISTS statDB;
 
-CREATE TABLE stat (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    total_size BIGINT,
-    date_time TIMESTAMP,
-    root_path VARCHAR(255),
-    load_time_seconds FLOAT
+CREATE TABLE IF NOT EXISTS stat(
+    id INT AUTO_INCREMENT PRIMARY KEY NOT NULL,
+    total_size BIGINT NOT NULL,
+    date_time TIMESTAMP NOT NULL,
+    root_path VARCHAR(255) NOT NULL,
+    load_time_seconds FLOAT NOT NULL
 );
 
 INSERT INTO stat (total_size, date_time, root_path, load_time_seconds) 

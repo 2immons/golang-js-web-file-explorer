@@ -58,17 +58,7 @@ class Controller {
         });
     }
     loadStats() {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                // сокрытие ошибок, загрузка
-                const data = yield this.model.fetchStats();
-                this.view.displayStatTable(data);
-            }
-            catch (error) {
-                console.log(error);
-                // обработка ошибок
-            }
-        });
+        this.model.redirectToStat();
     }
     calculateRootPath(path) {
         if (path[0] === '/') {
@@ -124,8 +114,9 @@ class Controller {
         if (this.currentPath === this.rootPath) {
             return;
         }
-        this.view.setCurrentPathToInput(this.rootPath);
-        this.loadData(this.defaultSortField, this.defaultSortOrder, this.rootPath);
+        this.currentPath = this.rootPath;
+        this.view.setCurrentPathToInput(this.currentPath);
+        this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
     }
     handleBackButtonClick() {
         const pathArray = this.currentPath.split('/');

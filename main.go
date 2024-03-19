@@ -15,18 +15,18 @@ import (
 const configFilePath string = "server/server.config.json" // путь к файлу конфигураци
 
 type ServerConfig struct {
-	Port string `json:"port"` // порт сервера
+	Port      string `json:"port"`      // порт сервера
+	ApacheURL string `json:"apacheURL"` // адрес сервера Apache
 }
 
-type ResponseStruct struct {
+type NodesGetResponseStruct struct {
 	IsSucceed bool        `json:"serverIsSucceed"` // успешно ли обработан запрос
 	ErrorText string      `json:"serverErrorText"` // текст ошибки
 	Nodes     interface{} `json:"nodes"`           // вхождения в заданную запросом директорию
 	LoadTime  float64     `json:"loadTime"`        // время обработки запроса
 }
 
-type RequestStruct struct {
-	IsSucceed   bool      `json:"serverIsSucceed"` // успешно ли отправлен запрос
+type StatsPostRequestStruct struct {
 	ErrorText   string    `json:"serverErrorText"` // текст ошибки
 	TotalSize   int64     `json:"totalSize"`       // общий вес всех директорий
 	LoadTime    float64   `json:"loadTime"`        // время обработки запроса
@@ -35,6 +35,14 @@ type RequestStruct struct {
 }
 
 func main() {
+	// обработка паники в случае ошибки сервера
+	defer func() {
+		r := recover()
+		if r != nil {
+			fmt.Printf("Остановка сервера из-за паники: %v.", r)
+		}
+	}()
+
 	// создание корневого контекста для программы с функцией отмены
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -42,15 +50,6 @@ func main() {
 	// отлавливание сигнала прерывания работы и передача его в канал
 	osSignalChan := make(chan os.Signal, 1)
 	signal.Notify(osSignalChan, os.Interrupt)
-
-	// обработка паники в случае ошибки сервера
-	defer func() {
-		r := recover()
-		if r != nil {
-			fmt.Printf("Остановка сервера из-за паники: %v.", r)
-			cancel()
-		}
-	}()
 
 	// горутина закрытия приложения с отменой корневого контекста
 	go func() {
@@ -61,8 +60,7 @@ func main() {
 
 	serverConfig, err := readConfigFromFile(configFilePath)
 	if err != nil {
-		fmt.Printf("Ошибка загрузки конфигурационных данных: %v\n", err)
-		return
+		panic(err)
 	}
 
 	// инициализации сервера
@@ -73,12 +71,12 @@ func main() {
 
 	// путь к style.css и .js файлам
 	http.Handle("/src/", http.StripPrefix("/src/", http.FileServer(http.Dir("./src"))))
-	http.Handle("/src/JSscripts/", http.StripPrefix("/src/JSscripts/", http.FileServer(http.Dir("./src/JSscripts"))))
+	http.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
 
 	// путь к index.html
 	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./public"))))
 
-	http.HandleFunc("/nodes", handleGetNodesRequestWithContext(ctx, handleGetNodesRequest))
+	http.HandleFunc("/nodes", handleGetNodesRequest)
 
 	// горутина запуска сервера
 	go func() {
@@ -119,18 +117,11 @@ func readConfigFromFile(configFilePath string) (ServerConfig, error) {
 }
 
 // getRequestParams получает параметры из запроса: путь корневой папки, поле сортировки, порядок сортировки
-func getRequestParams(r *http.Request) (string, string, string) {
+func getRequestParams(r *http.Request) (string, string, string, error) {
 	srcPath := r.URL.Query().Get("path")
 	sortField := r.URL.Query().Get("sortField")
 	sortOrder := r.URL.Query().Get("sortOrder")
-	return srcPath, sortField, sortOrder
-}
-
-// handleGetNodesRequestWithContext представляет из себя мидлвар для передачи контекста из main в getPaths
-func handleGetNodesRequestWithContext(ctx context.Context, h http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		h(w, r.WithContext(ctx))
-	}
+	return srcPath, sortField, sortOrder, nil
 }
 
 // handleGetNodesRequest совершает обход директорий по указанному в запросе пути,
@@ -139,7 +130,7 @@ func handleGetNodesRequestWithContext(ctx context.Context, h http.HandlerFunc) h
 func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 
-	response := ResponseStruct{
+	response := NodesGetResponseStruct{
 		IsSucceed: true,
 		ErrorText: "",
 		Nodes:     "",
@@ -147,7 +138,10 @@ func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// получение параметров из запроса
-	srcPath, sortField, sortOrder := getRequestParams(r)
+	srcPath, sortField, sortOrder, err := getRequestParams(r)
+	if err != nil {
+		panic(err)
+	}
 
 	// получение отсортированного среза узлов файловой системы с информацией о них
 	// по заданному пути, полю сортировки и направлению
@@ -190,25 +184,39 @@ func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseJsonFormat)
 
-	apacheURL := "http://localhost:80/statPost.php"
+	// отправка данных о размере, времени загрузки, даты запроса и пути обхода на сервер
+	sendStatsToServer(totalSize, loadTime, time.Now(), srcPath)
+}
 
-	requestData := RequestStruct{
-		IsSucceed:   true,
+// sendStatsToServer отправляет полученный суммарный размер, время загрузки, текущую дату и время и путь,
+// по которому был совершен обход, на сервер
+func sendStatsToServer(totalSize int64, loadTime float64, dateTime time.Time, srcPath string) {
+
+	// чтение конфигурационных данных из файла
+	serverConfig, err := readConfigFromFile(configFilePath)
+	if err != nil {
+		panic(err)
+	}
+
+	// инициализация запроса
+	requestData := StatsPostRequestStruct{
 		ErrorText:   "",
 		TotalSize:   totalSize,
 		LoadTime:    loadTime,
-		RequestDate: time.Now(),
+		RequestDate: dateTime,
 		RootPath:    srcPath,
 	}
 
+	// маршалинг запроса
 	jsonRequestData, err := json.Marshal(requestData)
 	if err != nil {
 		return
 	}
 
+	// создание http клиента и дальнейшая отправка запроса
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", apacheURL, bytes.NewBuffer(jsonRequestData))
+	req, err := http.NewRequest("POST", serverConfig.ApacheURL, bytes.NewBuffer(jsonRequestData))
 	if err != nil {
 		return
 	}
@@ -219,7 +227,6 @@ func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {

@@ -1,9 +1,4 @@
 <?php
-// установка заголовков
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
-
 // проверка, что пришел GET запрос
 if ($_SERVER["REQUEST_METHOD"] == "GET") {
     // подключение к базе данных
@@ -20,11 +15,13 @@ if ($_SERVER["REQUEST_METHOD"] == "GET") {
     }
 
     // SQL запрос для выборки данных
-    $sql = "SELECT * FROM stat";
+    $sql = "SELECT id, total_size, date_time, root_path, load_time_seconds FROM stat";
     $query_result = $conn->query($sql);
 
     // формирование HTML таблицы на основе данных из базы данных
-    $table = "<table border='2'>
+    $table = "
+        <a href='http://localhost:8324'>Вернуться</a>
+        <table border='2'>
         <tr>
             <th>№</th>
             <th>Размер</th>

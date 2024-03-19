@@ -57,18 +57,8 @@ class Controller {
         }
     }
 
-    async loadStats() {
-        try {
-            // сокрытие ошибок, загрузка
-
-            const data = await this.model.fetchStats();
-
-            this.view.displayStatTable(data);
-        } catch (error) {
-            console.log(error);
-
-            // обработка ошибок
-        }
+    loadStats() {
+        this.model.redirectToStat()
     }
 
     calculateRootPath(path: string): void {
@@ -131,8 +121,9 @@ class Controller {
         if (this.currentPath === this.rootPath) {
             return;
         }
-        this.view.setCurrentPathToInput(this.rootPath);
-        this.loadData(this.defaultSortField, this.defaultSortOrder, this.rootPath);
+        this.currentPath = this.rootPath;
+        this.view.setCurrentPathToInput(this.currentPath);
+        this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
     }
 
     handleBackButtonClick(): void {

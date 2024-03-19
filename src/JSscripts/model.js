@@ -35,34 +35,9 @@ class Model {
             }
         });
     }
-    // fetchStats получает данные с сервера Apache о статистике: зависимость времени загрузки от объема
-    fetchStats() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const url = `http://localhost:80/statGet.php`;
-            try {
-                const response = yield fetch(url, {
-                    method: 'GET',
-                    mode: "no-cors",
-                    headers: {
-                        'Accept': 'text/html'
-                    }
-                });
-                if (!response.ok) {
-                    // return response.text().then(text => {
-                    //     console.log(text)
-                    //     throw new Error(text);
-                    // })
-                    console.log(response.status);
-                    throw new Error('Данные не получены (статус не 200 OK).');
-                }
-                const data = yield response.text();
-                return data;
-            }
-            catch (error) {
-                console.error('Ошибка запроса:', error);
-                throw error;
-            }
-        });
+    redirectToStat() {
+        const url = "http://localhost/statGet.php";
+        window.location.href = url;
     }
 }
 export default Model;
