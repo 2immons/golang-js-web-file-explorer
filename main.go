@@ -36,7 +36,6 @@ type StatsPostRequestStruct struct {
 }
 
 func main() {
-	// обработка паники в случае ошибки сервера
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -59,6 +58,7 @@ func main() {
 		cancel()
 	}()
 
+	// чтение конфигурационных данных сервера
 	serverConfig, err := readConfigFromFile(configFilePath)
 	if err != nil {
 		panic(err)
@@ -86,12 +86,10 @@ func main() {
 		cancel()
 	}()
 
-	// блокировка программы до момента отмены контекста ctx;
 	<-ctx.Done()
 
-	// остановка сервера
 	fmt.Println("Остановка сервера...")
-	err = server.Shutdown(context.Background())
+	err = server.Shutdown(ctx)
 	if err != nil {
 		fmt.Printf("Ошибка при остановке сервера %v\n", err)
 	}
@@ -131,7 +129,7 @@ func getRequestParams(r *http.Request) (string, string, string, error) {
 func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 
-	response := NodesGetResponseStruct{
+	responseData := NodesGetResponseStruct{
 		IsSucceed: true,
 		ErrorText: "",
 		Nodes:     "",
@@ -145,19 +143,19 @@ func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// получение отсортированного среза узлов файловой системы с информацией о них
-	// по заданному пути, полю сортировки и направлению
-	nodesSliceForJson, totalSize, err, srcPath := fileprocessing.GetNodesSliceForJson(srcPath, sortField, sortOrder)
+	// по заданному пути, полю сортировки и порядку
+	nodesSliceForJson, totalSize, srcPath, err := fileprocessing.GetNodesSliceForJson(srcPath, sortField, sortOrder)
 	if err != nil {
-		duration := float64(time.Since(startTime).Seconds())
+		requestLoadTime := float64(time.Since(startTime).Seconds())
 
 		w.WriteHeader(http.StatusOK)
 
-		response.ErrorText = fmt.Sprintf("Ошибка при создании сортированного среза данных: %v", err)
-		response.IsSucceed = false
-		response.LoadTime = duration
-		response.Nodes = "No data"
+		responseData.ErrorText = fmt.Sprintf("Внутренняя ошибка сервера: %v", err)
+		responseData.IsSucceed = false
+		responseData.LoadTime = requestLoadTime
+		responseData.Nodes = "Нет данных"
 
-		responseJsonFormat, err := json.Marshal(response)
+		responseJsonFormat, err := json.Marshal(responseData)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -169,14 +167,13 @@ func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// расчет времени выполнения работы функции
-	loadTime := float64(time.Since(startTime).Seconds())
+	requestLoadTime := float64(time.Since(startTime).Seconds())
 
-	// составление ответа на клиент
-	response.Nodes = nodesSliceForJson
-	response.LoadTime = loadTime
+	responseData.Nodes = nodesSliceForJson
+	responseData.LoadTime = requestLoadTime
 
-	// конвертация ответа на клиент в JSON формат
-	responseJsonFormat, err := json.Marshal(response)
+	// маршалинг ответа
+	responseJsonFormat, err := json.Marshal(responseData)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -187,8 +184,8 @@ func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(responseJsonFormat)
 
-	// отправка данных о размере, времени загрузки, даты запроса и пути обхода на сервер
-	sendStatsToServer(totalSize, loadTime, time.Now(), srcPath)
+	// отправка данных о размере, времени загрузки, даты запроса и пути обхода на сервер Apache
+	sendStatsToServer(totalSize, requestLoadTime, time.Now(), srcPath)
 }
 
 // sendStatsToServer отправляет полученный суммарный размер, время загрузки, текущую дату и время и путь,
@@ -201,7 +198,6 @@ func sendStatsToServer(totalSize int64, loadTime float64, dateTime time.Time, sr
 		panic(err)
 	}
 
-	// инициализация запроса
 	requestData := StatsPostRequestStruct{
 		ErrorText:   "",
 		TotalSize:   totalSize,
@@ -216,14 +212,13 @@ func sendStatsToServer(totalSize int64, loadTime float64, dateTime time.Time, sr
 		return
 	}
 
-	// создание http клиента и дальнейшая отправка запроса
 	client := &http.Client{}
 
+	// отправка запроса
 	req, err := http.NewRequest("POST", serverConfig.ApacheURL, bytes.NewBuffer(jsonRequestData))
 	if err != nil {
 		return
 	}
-
 	req.Header.Set("Content-Type", "applicaton/json")
 
 	resp, err := client.Do(req)
@@ -232,7 +227,7 @@ func sendStatsToServer(totalSize int64, loadTime float64, dateTime time.Time, sr
 	}
 	defer resp.Body.Close()
 
-	// чтение ответа от сервера и вывод в терминал
+	// чтение ответа от сервера и вывод его в терминал
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return

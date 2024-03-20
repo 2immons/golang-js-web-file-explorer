@@ -1,4 +1,4 @@
-import Controller from './controller.js';
+import Controller from './controller';
 import Chart, { TimeScale } from 'chart.js/auto';
 
 type Nodes = {

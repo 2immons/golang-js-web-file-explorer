@@ -1,5 +1,5 @@
-import Model from './model.js';
-import View from './view.js';
+import Model from './model';
+import View from './view';
 
 const ASC: string = 'asc';
 const DESC: string = 'desc';

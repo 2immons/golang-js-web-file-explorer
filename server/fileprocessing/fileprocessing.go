@@ -41,22 +41,22 @@ type nodeItemForJson struct {
 }
 
 // GetNodesSliceForJson возвращает для маршалинга отсортированный срез срез вхождений в заданную директорию с информацией о них
-func GetNodesSliceForJson(srcPath string, sortField string, sortOrder string) ([]nodeItemForJson, int64, error, string) {
-	pathsSlice, err, updatedSrcPath := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
+func GetNodesSliceForJson(srcPath string, sortField string, sortOrder string) ([]nodeItemForJson, int64, string, error) {
+	pathsSlice, updatedSrcPath, err := createSortedNodesSlice(srcPath, sortField, sortOrder)
 	if err != nil {
-		return nil, 0, err, ""
+		return nil, 0, "", err
 	}
-	totalSize := getTotalSize(pathsSlice)
-	pathSliceForJson := createConvertedPathsSliceForJson(pathsSlice)
-	return pathSliceForJson, totalSize, nil, updatedSrcPath
+	totalSize := getTotalNodesSize(pathsSlice)
+	pathSliceForJson := createConvertedNodesSliceForJson(pathsSlice)
+	return pathSliceForJson, totalSize, updatedSrcPath, nil
 }
 
-// createSortedSliceOfPathItems создает сортированный срез вхождений в заданную директорию
-func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]nodeItem, error, string) {
+// createSortedNodesSlice создает сортированный срез вхождений в заданную директорию
+func createSortedNodesSlice(srcPath string, sortField string, sortOrder string) ([]nodeItem, string, error) {
 	if srcPath == "" {
 		currentDir, err := os.Getwd()
 		if err != nil {
-			return nil, err, ""
+			return nil, "", err
 		}
 		srcPath = filepath.Join(filepath.VolumeName(filepath.Clean(currentDir)), "/")
 	}
@@ -64,13 +64,13 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 	// получение вхождений в заданную директрию
 	dirEntries, err := os.ReadDir(srcPath)
 	if err != nil {
-		return nil, err, ""
+		return nil, "", err
 	}
 
 	var wg sync.WaitGroup
 
 	// срез для вхождений (dirEntries) в заданную директорию
-	pathsSlice := make([]nodeItem, len(dirEntries))
+	nodesSlice := make([]nodeItem, len(dirEntries))
 
 	// получение информации о каждом вхождении (имя, размер, тип, время модификации) и запись в срез pathsSlice
 	for i, dirEntry := range dirEntries {
@@ -78,7 +78,7 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 		go func(index int, dirEntry os.DirEntry) {
 			defer wg.Done()
 			// текущий index передается внутрь замыкания, чтобы каждая горутина использовала свой уникальный индекс
-			err = getDirEntryInfoAndWriteToSlice(srcPath, dirEntry, pathsSlice, index)
+			err = getNodeInfoAndWriteToSlice(srcPath, dirEntry, nodesSlice, index)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -88,26 +88,26 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 
 	// вызов функций сортировки среза pathSlice в зависимости от поля сортировки
 	if sortField == string(size) {
-		sortPathsBySize(pathsSlice, sortOrder)
+		sortNodesBySize(nodesSlice, sortOrder)
 	} else if sortField == string(name) {
-		sortPathsByName(pathsSlice, sortOrder)
+		sortNodesByName(nodesSlice, sortOrder)
 	} else if sortField == string(dirType) {
-		sortPathsByType(pathsSlice, sortOrder)
+		sortNodesByType(nodesSlice, sortOrder)
 	} else if sortField == string(date) {
-		sortPathsByEditDate(pathsSlice, sortOrder)
+		sortNodesByEditDate(nodesSlice, sortOrder)
 	}
 
-	return pathsSlice, nil, srcPath
+	return nodesSlice, srcPath, nil
 }
 
-// createConvertedPathsSliceForJson из полученного среза вхождений создает новый срез вхождений, подходящий для маршалинга
-func createConvertedPathsSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
-	pathsSliceForJson := make([]nodeItemForJson, len(pathsSlice))
+// createConvertedNodesSliceForJson из полученного среза вхождений создает новый срез вхождений, подходящий для маршалинга
+func createConvertedNodesSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
+	nodesSliceForJson := make([]nodeItemForJson, len(pathsSlice))
 
 	for i, value := range pathsSlice {
-		// если имя вхождения пустое, присвоение строк с сообщением об ошибке доступа
+		// если путь вхождения пустой, присвоение строк с сообщением об ошибке доступа
 		if value.Path == "" {
-			pathsSliceForJson[i] = nodeItemForJson{
+			nodesSliceForJson[i] = nodeItemForJson{
 				Name:     value.Name,
 				Path:     "Ошибка доступа",
 				ItemSize: "Ошибка доступа",
@@ -124,7 +124,7 @@ func createConvertedPathsSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
 		}
 
 		// присвоение значений новому срезу
-		pathsSliceForJson[i] = nodeItemForJson{
+		nodesSliceForJson[i] = nodeItemForJson{
 			Name:     value.Name,
 			Path:     value.Path,
 			ItemSize: formatSize(value.ItemSize),
@@ -133,17 +133,17 @@ func createConvertedPathsSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
 		}
 	}
 
-	return pathsSliceForJson
+	return nodesSliceForJson
 }
 
-// getDirEntryInfoAndWriteToSlice получает имя, размер, тип (файл или директория) и последнее время редактирования директории,
+// getNodeInfoAndWriteToSlice получает имя, размер, тип (файл или директория) и последнее время редактирования директории,
 // после чего добавляет эту информацию в срез вхождений pathSlice по своему уникальному индексу
-func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice []nodeItem, index int) error {
+func getNodeInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsSlice []nodeItem, index int) error {
 	// получение пути от корневой директории до текущей папки или файла
 	currentPath := filepath.Join(srcPath, dirEntry.Name())
 
 	// получение размера файла или директории по заданному пути
-	itemSize, err := getDirSize(currentPath, dirEntry)
+	itemSize, err := getNodeSize(currentPath, dirEntry)
 	if err != nil {
 		(pathsSlice)[index] = nodeItem{dirEntry.Name(), "", 0, false, time.Now()}
 		return err
@@ -164,12 +164,12 @@ func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsS
 	return nil
 }
 
-// getDirSize по заданному пути получает размер директории (файла или папки)
-func getDirSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
+// getNodeSize по заданному пути получает размер директории (файла или папки)
+func getNodeSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
 
 	// вызов calculateFolderSize(), если путь является папкой
 	if dirEntry.IsDir() {
-		itemSize, err := calculateFolderSize(currentPath)
+		itemSize, err := calculateCatalogSize(currentPath)
 		if err != nil {
 			return 0, err
 		}
@@ -185,7 +185,7 @@ func getDirSize(currentPath string, dirEntry fs.DirEntry) (int64, error) {
 }
 
 // sortParths производит сортировку среза по размеру директории
-func sortPathsBySize(pathsSlice []nodeItem, sortOrder string) {
+func sortNodesBySize(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
 			return pathsSlice[i].ItemSize > pathsSlice[j].ItemSize
@@ -198,7 +198,7 @@ func sortPathsBySize(pathsSlice []nodeItem, sortOrder string) {
 }
 
 // sortParths производит сортировку среза по имени директории
-func sortPathsByName(pathsSlice []nodeItem, sortOrder string) {
+func sortNodesByName(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
 			return pathsSlice[i].Name < pathsSlice[j].Name
@@ -211,7 +211,7 @@ func sortPathsByName(pathsSlice []nodeItem, sortOrder string) {
 }
 
 // sortParths производит сортировку среза по типу директории
-func sortPathsByType(pathsSlice []nodeItem, sortOrder string) {
+func sortNodesByType(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
 			return pathsSlice[i].IsDir && !pathsSlice[j].IsDir
@@ -224,7 +224,7 @@ func sortPathsByType(pathsSlice []nodeItem, sortOrder string) {
 }
 
 // sortParths производит сортировку среза по дате модификации директории
-func sortPathsByEditDate(pathsSlice []nodeItem, sortOrder string) {
+func sortNodesByEditDate(pathsSlice []nodeItem, sortOrder string) {
 	less := func(i, j int) bool {
 		if sortOrder == string(asc) {
 			return pathsSlice[i].EditDate.Before(pathsSlice[j].EditDate)
@@ -254,8 +254,8 @@ func formatSize(size int64) string {
 	}
 }
 
-// calculateFolderSize подсчитывает размер папки, учитывая все вложенные в нее элементы
-func calculateFolderSize(folderPath string) (int64, error) {
+// calculateCatalogSize подсчитывает размер папки, учитывая все вложенные в нее элементы
+func calculateCatalogSize(folderPath string) (int64, error) {
 	var size int64
 
 	err := filepath.Walk(folderPath, func(path string, info os.FileInfo, err error) error {
@@ -270,7 +270,7 @@ func calculateFolderSize(folderPath string) (int64, error) {
 	return size, err
 }
 
-func getTotalSize(pathsSlice []nodeItem) int64 {
+func getTotalNodesSize(pathsSlice []nodeItem) int64 {
 	var totalSize int64 = 0
 	for _, node := range pathsSlice {
 		totalSize += node.ItemSize
