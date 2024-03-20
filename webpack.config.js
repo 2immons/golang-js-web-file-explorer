@@ -9,4 +9,9 @@ module.exports = {
         filename: '[name].bundle.js',
         path: path.resolve(__dirname, 'dist'),
     },
+    resolve: {
+        alias: {
+            'chart.js/auto': path.resolve(__dirname, 'node_modules/chart.js/auto')
+        }
+    }
 };

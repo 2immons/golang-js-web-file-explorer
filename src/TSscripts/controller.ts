@@ -26,7 +26,8 @@ class Controller {
     private sortByTypeButton: HTMLElement | null = document.getElementById('sort-button-type');
     private sortBySizeButton: HTMLElement | null = document.getElementById('sort-button-size');
     private sortByDateButton: HTMLElement | null = document.getElementById('sort-button-date');
-    private statButton: HTMLElement | null = document.getElementById("stat-button");
+    private statButtonTable: HTMLElement | null = document.getElementById("stat-button-table");
+    private statButtonGraphic: HTMLElement | null = document.getElementById("stat-button-graphic");
     private pathInput = document.getElementById('path') as HTMLInputElement;
 
     constructor() {
@@ -57,8 +58,23 @@ class Controller {
         }
     }
 
-    loadStats() {
+    loadStatsTable() {
         this.model.redirectToStat()
+    }
+
+    async loadStatsGraphic() {
+        this.view.clearNodes();
+        this.view.showLoading();
+        try {
+            const data = await this.model.fetchStats();
+            this.view.hideLoading();
+            console.log(data)
+            this.view.displayChart(data);
+            // this.view.setCurrentPathToInput(this.currentPath);
+        } catch (error) {
+            this.view.hideLoading();
+            this.view.showError();
+        }
     }
 
     calculateRootPath(path: string): void {
@@ -96,13 +112,20 @@ class Controller {
             this.sortByDateButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_EDITDATE));
         }
 
-        if (this.statButton) {
-            this.statButton.addEventListener('click', () => this.handleStatButtonClick());
+        if (this.statButtonTable) {
+            this.statButtonTable.addEventListener('click', () => this.handleStatButtonTableClick());
+        }
+        if (this.statButtonGraphic) {
+            this.statButtonGraphic.addEventListener('click', () => this.handleStatButtonGraphicClick());
         }
     }
 
-    handleStatButtonClick(): void {
-        this.loadStats();
+    handleStatButtonTableClick(): void {
+        this.loadStatsTable();
+    }
+
+    handleStatButtonGraphicClick(): void {
+        this.loadStatsGraphic();
     }
 
     handleSortButtonClick(sortField: string): void {

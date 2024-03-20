@@ -1,4 +1,5 @@
 import Controller from './controller.js';
+import Chart from 'chart.js/auto/auto.js';
 
 type Nodes = {
     name: string;
@@ -6,6 +7,13 @@ type Nodes = {
     type: string;
     itemSize: string;
     editDate: string;
+};
+
+type ChartData = {
+    id: number;
+    load_time_seconds: number;
+    root_path: string;
+    total_size: number;
 };
 
 class View {
@@ -33,6 +41,29 @@ class View {
         if (this.tableContainer) {
             this.tableContainer.innerHTML = data;
         }
+    }
+
+    displayChart(data: ChartData[]): void {
+        const ctx = document.getElementById('chart-wrapper')
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(row => row.load_time_seconds),
+                datasets: [{
+                    label: 'Объем данных',
+                    data: data.map(row => row.total_size),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+            scales: {
+                y: {
+                beginAtZero: true
+                }
+            }
+            }
+        })
     }
 
     // displayNodes отрисовывает полученные с сервера пути в качестве потомков списка

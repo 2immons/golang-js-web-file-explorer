@@ -28,7 +28,8 @@ class Controller {
         this.sortByTypeButton = document.getElementById('sort-button-type');
         this.sortBySizeButton = document.getElementById('sort-button-size');
         this.sortByDateButton = document.getElementById('sort-button-date');
-        this.statButton = document.getElementById("stat-button");
+        this.statButtonTable = document.getElementById("stat-button-table");
+        this.statButtonGraphic = document.getElementById("stat-button-graphic");
         this.pathInput = document.getElementById('path');
         this.model = new Model();
         this.view = new View(this);
@@ -57,8 +58,25 @@ class Controller {
             }
         });
     }
-    loadStats() {
+    loadStatsTable() {
         this.model.redirectToStat();
+    }
+    loadStatsGraphic() {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.view.clearNodes();
+            this.view.showLoading();
+            try {
+                const data = yield this.model.fetchStats();
+                this.view.hideLoading();
+                console.log(data);
+                this.view.displayChart(data);
+                // this.view.setCurrentPathToInput(this.currentPath);
+            }
+            catch (error) {
+                this.view.hideLoading();
+                this.view.showError();
+            }
+        });
     }
     calculateRootPath(path) {
         if (path[0] === '/') {
@@ -92,12 +110,18 @@ class Controller {
         if (this.sortByDateButton) {
             this.sortByDateButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_EDITDATE));
         }
-        if (this.statButton) {
-            this.statButton.addEventListener('click', () => this.handleStatButtonClick());
+        if (this.statButtonTable) {
+            this.statButtonTable.addEventListener('click', () => this.handleStatButtonTableClick());
+        }
+        if (this.statButtonGraphic) {
+            this.statButtonGraphic.addEventListener('click', () => this.handleStatButtonGraphicClick());
         }
     }
-    handleStatButtonClick() {
-        this.loadStats();
+    handleStatButtonTableClick() {
+        this.loadStatsTable();
+    }
+    handleStatButtonGraphicClick() {
+        this.loadStatsGraphic();
     }
     handleSortButtonClick(sortField) {
         this.currentSortOrder === this.ASC ? (this.currentSortOrder = this.DESC) : (this.currentSortOrder = this.ASC);
