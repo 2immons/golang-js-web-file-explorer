@@ -1,5 +1,5 @@
 import Controller from './controller.js';
-import Chart, { TimeScale } from 'chart.js/auto';
+import Chart from 'chart.js/auto';
 
 type Nodes = {
     name: string;
