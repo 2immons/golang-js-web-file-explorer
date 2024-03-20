@@ -320,8 +320,8 @@ table {
 
 .loading-data {
     display: none;
-    height: fit-content;
-    width: fit-content;
+    height: 100%;
+    width: 100%;
     position: absolute;
     top: 0;
     right: 0;
@@ -332,6 +332,7 @@ table {
     align-items: center;
     font-size: 35px;
     font-weight: 900;
+    z-index: 2;
 }
 
 .node-list__item {

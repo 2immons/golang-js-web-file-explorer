@@ -1,23 +1,22 @@
 {
   "type": "module",
   "devDependencies": {
-    "css-loader": "^6.10.0",
-    "html-webpack-plugin": "^5.6.0",
-    "style-loader": "^3.3.4",
-    "ts-loader": "^9.5.1",
-    "typescript": "^5.4.2",
-    "webpack": "^5.90.3",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.0.3"
+    "css-loader": "6.10.0",
+    "html-webpack-plugin": "5.6.0",
+    "style-loader": "3.3.4",
+    "ts-loader": "9.5.1",
+    "typescript": "5.4.2",
+    "webpack": "5.90.3",
+    "webpack-cli": "5.1.4",
+    "webpack-dev-server": "5.0.3"
   },
   "scripts": {
-    "build": "tsc && webpack",
-    "start": "go run ."
+    "build": "tsc && webpack"
   },
   "dependencies": {
-    "chart.js": "^4.4.2",
-    "chartjs": "^0.3.24",
-    "nodejs": "^0.0.0",
-    "npm": "^10.5.0"
+    "chart.js": "4.4.2",
+    "chartjs": "0.3.24",
+    "nodejs": "0.0.0",
+    "npm": "10.5.0"
   }
 }

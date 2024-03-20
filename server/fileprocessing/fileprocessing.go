@@ -96,6 +96,7 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 	} else if sortField == string(date) {
 		sortPathsByEditDate(pathsSlice, sortOrder)
 	}
+
 	return pathsSlice, nil, srcPath
 }
 
@@ -144,6 +145,7 @@ func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsS
 	// получение размера файла или директории по заданному пути
 	itemSize, err := getDirSize(currentPath, dirEntry)
 	if err != nil {
+		(pathsSlice)[index] = nodeItem{dirEntry.Name(), "", 0, false, time.Now()}
 		return err
 	}
 
@@ -155,11 +157,10 @@ func getDirEntryInfoAndWriteToSlice(srcPath string, dirEntry fs.DirEntry, pathsS
 	lastModifiedTime := fileInfo.ModTime()
 
 	// получение имени директори и абсолютного пути
-	dirName := dirEntry.Name()
-	absoluteDirPath := filepath.Join(srcPath, dirName)
+	absoluteDirPath := filepath.Join(srcPath, dirEntry.Name())
 
 	// вставка данных в срез по индексу
-	(pathsSlice)[index] = nodeItem{dirName, absoluteDirPath, itemSize, dirEntry.IsDir(), lastModifiedTime}
+	(pathsSlice)[index] = nodeItem{dirEntry.Name(), absoluteDirPath, itemSize, dirEntry.IsDir(), lastModifiedTime}
 	return nil
 }
 

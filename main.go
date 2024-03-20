@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	fileprocessing "file-explorer/server/fileprocessing"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/signal"
-	fileprocessing "paths-getter/server/fileprocessing"
 	"time"
 )
 
