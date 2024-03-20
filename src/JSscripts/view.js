@@ -1,4 +1,4 @@
-import Chart from 'chart.js/auto';
+import Chart from '../../node_modules/chart.js/auto/auto.js';
 class View {
     constructor(controller) {
         this.nodeList = document.querySelector('.node-list-section');
@@ -6,6 +6,7 @@ class View {
         this.loadingDiv = document.querySelector('.loading-data');
         this.pathInput = document.getElementById('path');
         this.tableContainer = document.getElementById('table-container');
+        this.chartWrapper = document.getElementById('chart-wrapper');
         this.controller = controller;
     }
     // clearNodes удаляет все пути из списка
@@ -22,25 +23,26 @@ class View {
         }
     }
     displayChart(data) {
-        const ctx = document.getElementById('chart-wrapper');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.map(row => row.load_time_seconds),
-                datasets: [{
-                        label: 'Объем данных',
-                        data: data.map(row => row.total_size),
-                        borderWidth: 1
-                    }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+        if (this.chartWrapper !== null) {
+            new Chart(this.chartWrapper, {
+                type: 'bar',
+                data: {
+                    labels: data.map(row => row.load_time_seconds),
+                    datasets: [{
+                            label: 'Объем данных',
+                            data: data.map(row => row.total_size),
+                            borderWidth: 1
+                        }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     }
     // displayNodes отрисовывает полученные с сервера пути в качестве потомков списка
     displayNodes(nodes) {

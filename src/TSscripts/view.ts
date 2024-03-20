@@ -1,5 +1,5 @@
 import Controller from './controller.js';
-import Chart from 'chart.js/auto/auto.js';
+import Chart from '../../node_modules/chart.js/auto/auto.js';
 
 type Nodes = {
     name: string;
@@ -23,6 +23,7 @@ class View {
     private loadingDiv: HTMLElement | null = document.querySelector('.loading-data');
     private pathInput = document.getElementById('path') as HTMLInputElement;
     private tableContainer = document.getElementById('table-container') as HTMLInputElement;
+    private chartWrapper: HTMLCanvasElement | null = document.getElementById('chart-wrapper') as HTMLCanvasElement | null;
 
     constructor(controller: Controller) {
         this.controller = controller;
@@ -43,27 +44,27 @@ class View {
         }
     }
 
-    displayChart(data: ChartData[]): void {
-        const ctx = document.getElementById('chart-wrapper')
-
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: data.map(row => row.load_time_seconds),
-                datasets: [{
-                    label: 'Объем данных',
-                    data: data.map(row => row.total_size),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-            scales: {
-                y: {
-                beginAtZero: true
+    displayChart(data: ChartData[]): void { 
+        if (this.chartWrapper !== null){
+            new Chart(this.chartWrapper, {
+                type: 'bar',
+                data: {
+                    labels: data.map(row => row.load_time_seconds),
+                    datasets: [{
+                        label: 'Объем данных',
+                        data: data.map(row => row.total_size),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                scales: {
+                    y: {
+                    beginAtZero: true
+                    }
                 }
-            }
-            }
-        })
+                }
+            })
+        }
     }
 
     // displayNodes отрисовывает полученные с сервера пути в качестве потомков списка
