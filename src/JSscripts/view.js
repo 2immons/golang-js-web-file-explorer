@@ -1,52 +1,66 @@
-import Chart from '../../node_modules/chart.js/auto/auto.js';
+import Chart from 'chart.js/auto';
 class View {
     constructor(controller) {
         this.nodeList = document.querySelector('.node-list-section');
         this.errorDiv = document.querySelector('.error-data-not-found');
         this.loadingDiv = document.querySelector('.loading-data');
         this.pathInput = document.getElementById('path');
-        this.tableContainer = document.getElementById('table-container');
-        this.chartWrapper = document.getElementById('chart-wrapper');
+        this.nodeSection = document.querySelector('.workspace');
+        this.statButtonGraphic = document.getElementById("stat-button-graphic");
+        this.backToDirsButton = document.getElementById("stat-button-graphic-back");
+        this.chartWrapper = document.querySelector('.chart');
+        this.chartCanvas = document.getElementById('chart');
+        this.chartItem = null;
         this.controller = controller;
     }
-    // clearNodes удаляет все пути из списка
-    clearNodes() {
-        if (this.nodeList) {
-            while (this.nodeList.firstChild) {
-                this.nodeList.removeChild(this.nodeList.firstChild);
-            }
-        }
-    }
-    displayStatTable(data) {
-        if (this.tableContainer) {
-            this.tableContainer.innerHTML = data;
-        }
-    }
-    displayChart(data) {
-        if (this.chartWrapper !== null) {
-            new Chart(this.chartWrapper, {
-                type: 'bar',
+    // создание и отрисовка графика
+    createAndDisplayChart(data) {
+        if (this.chartCanvas !== null) {
+            // сортировка данных перед созданием графика
+            data.sort(this.compareLoadTime);
+            // извлечение значений времени и объема данных для графика
+            const loadTimesSeconds = data.map(row => row.load_time_seconds);
+            const totalSizesMb = data.map(row => row.total_size / 1024 / 1024); // получение примерного количества Мбайтов
+            // создание графика с правильными метками и данными
+            this.chartItem = new Chart(this.chartCanvas, {
+                type: 'line',
                 data: {
-                    labels: data.map(row => row.load_time_seconds),
+                    labels: loadTimesSeconds,
                     datasets: [{
                             label: 'Объем данных',
-                            data: data.map(row => row.total_size),
+                            data: totalSizesMb,
                             borderWidth: 1
                         }]
                 },
                 options: {
+                    responsive: true,
                     scales: {
                         y: {
-                            beginAtZero: true
+                            title: {
+                                display: true,
+                                text: "Объем (Мб)"
+                            },
+                            beginAtZero: true,
+                            stacked: true
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: "Время (с)"
+                            }
                         }
                     }
                 }
             });
+            this.chartCanvas.style.display = "flex";
+            if (this.chartWrapper) {
+                this.chartWrapper.style.display = "flex";
+            }
         }
     }
     // displayNodes отрисовывает полученные с сервера пути в качестве потомков списка
     displayNodes(nodes) {
-        this.clearNodes();
+        this.removeNodes();
         if (this.nodeList) {
             nodes.forEach(node => {
                 let newNode = document.createElement('div');
@@ -79,35 +93,96 @@ class View {
             });
         }
     }
-    setLoadingTime(time) {
+    // метод для сравнения данных статистики по времени
+    compareLoadTime(a, b) {
+        if (a.load_time_seconds < b.load_time_seconds) {
+            return -1;
+        }
+        if (a.load_time_seconds > b.load_time_seconds) {
+            return 1;
+        }
+        return 0;
+    }
+    // отображает время загрузки
+    showLoadingTime(time) {
         const timeElement = document.querySelector('.time');
         if (timeElement) {
             timeElement.textContent = `Загружено за: ${time} секунд`;
         }
     }
-    showError() {
-        if (this.errorDiv) {
-            this.errorDiv.style.display = 'display';
+    // устанавливает текущий путь в интерфейс поля ввода пути
+    setCurrentPathToInput(path) {
+        if (this.pathInput) {
+            this.pathInput.value = path;
         }
     }
+    // удалить созданный график, скрыть его и отобразить директории
+    destroyChartAndShowNodeSection() {
+        if (this.chartItem)
+            this.chartItem.destroy();
+        if (this.nodeSection && this.chartWrapper) {
+            this.chartWrapper.style.display = "none";
+            this.nodeSection.style.display = "";
+        }
+    }
+    // удаляет все пути из списка
+    removeNodes() {
+        if (this.nodeList) {
+            while (this.nodeList.firstChild) {
+                this.nodeList.removeChild(this.nodeList.firstChild);
+            }
+        }
+    }
+    // СОКРЫТИЕ, ПОЯВЛЕНИЕ ЭЛЕМЕНТОВ ПОЛЬЗОВАТЕЛЬСКОГО ИНТЕРФЕЙСА:
+    // сокрытие секции с директориями
+    hideNodeSection() {
+        if (this.nodeSection)
+            this.nodeSection.style.display = "none";
+    }
+    // появление кнопки возвращающей к директориям
+    showBackButton() {
+        if (this.backToDirsButton)
+            this.backToDirsButton.style.display = "inline-block";
+    }
+    // сокрытие кнопки возвращающей к директориям
+    hideBackButton() {
+        if (this.backToDirsButton) {
+            this.backToDirsButton.style.display = "none";
+        }
+    }
+    // появление кнопки включающей отображение графика
+    showGraphicButton() {
+        if (this.statButtonGraphic) {
+            this.statButtonGraphic.style.display = "inline-block";
+        }
+    }
+    // сокрытие кнопки включающей отображение графика
+    hideGraphicButton() {
+        if (this.statButtonGraphic)
+            this.statButtonGraphic.style.display = "none";
+    }
+    // появление ошибки загрузки
+    showError() {
+        if (this.errorDiv) {
+            this.errorDiv.style.display = 'flex';
+        }
+    }
+    // сокрытие ошибки загрузки
     hideError() {
         if (this.errorDiv) {
             this.errorDiv.style.display = 'none';
         }
     }
+    // появление сообщения "загрузка данных"
     showLoading() {
         if (this.loadingDiv) {
             this.loadingDiv.style.display = 'flex';
         }
     }
+    // сокрытие сообщения "загрузка данных"
     hideLoading() {
         if (this.loadingDiv) {
             this.loadingDiv.style.display = 'none';
-        }
-    }
-    setCurrentPathToInput(path) {
-        if (this.pathInput) {
-            this.pathInput.value = path;
         }
     }
 }

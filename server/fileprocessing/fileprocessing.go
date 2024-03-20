@@ -41,22 +41,22 @@ type nodeItemForJson struct {
 }
 
 // GetNodesSliceForJson возвращает для маршалинга отсортированный срез срез вхождений в заданную директорию с информацией о них
-func GetNodesSliceForJson(srcPath string, sortField string, sortOrder string) ([]nodeItemForJson, int64, error) {
-	pathsSlice, err := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
+func GetNodesSliceForJson(srcPath string, sortField string, sortOrder string) ([]nodeItemForJson, int64, error, string) {
+	pathsSlice, err, updatedSrcPath := createSortedSliceOfPathItems(srcPath, sortField, sortOrder)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, err, ""
 	}
 	totalSize := getTotalSize(pathsSlice)
 	pathSliceForJson := createConvertedPathsSliceForJson(pathsSlice)
-	return pathSliceForJson, totalSize, nil
+	return pathSliceForJson, totalSize, nil, updatedSrcPath
 }
 
 // createSortedSliceOfPathItems создает сортированный срез вхождений в заданную директорию
-func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]nodeItem, error) {
+func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder string) ([]nodeItem, error, string) {
 	if srcPath == "" {
 		currentDir, err := os.Getwd()
 		if err != nil {
-			return nil, err
+			return nil, err, ""
 		}
 		srcPath = filepath.Join(filepath.VolumeName(filepath.Clean(currentDir)), "/")
 	}
@@ -64,7 +64,7 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 	// получение вхождений в заданную директрию
 	dirEntries, err := os.ReadDir(srcPath)
 	if err != nil {
-		return nil, err
+		return nil, err, ""
 	}
 
 	var wg sync.WaitGroup
@@ -96,7 +96,7 @@ func createSortedSliceOfPathItems(srcPath string, sortField string, sortOrder st
 	} else if sortField == string(date) {
 		sortPathsByEditDate(pathsSlice, sortOrder)
 	}
-	return pathsSlice, nil
+	return pathsSlice, nil, srcPath
 }
 
 // createConvertedPathsSliceForJson из полученного среза вхождений создает новый срез вхождений, подходящий для маршалинга

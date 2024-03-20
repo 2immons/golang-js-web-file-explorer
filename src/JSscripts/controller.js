@@ -9,18 +9,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import Model from './model.js';
 import View from './view.js';
+const ASC = 'asc';
+const DESC = 'desc';
+const NODE_NAME = 'name';
+const NODE_TYPE = 'type';
+const NODE_EDITDATE = 'date';
+const NODE_SIZE = 'size';
 class Controller {
     constructor() {
-        this.ASC = 'asc';
-        this.DESC = 'desc';
-        this.NODE_NAME = 'name';
-        this.NODE_TYPE = 'type';
-        this.NODE_EDITDATE = 'date';
-        this.NODE_SIZE = 'size';
-        this.defaultSortOrder = this.ASC;
-        this.defaultSortField = this.NODE_SIZE;
+        this.defaultSortOrder = ASC;
+        this.defaultSortField = NODE_SIZE;
         this.rootPath = "";
-        this.currentSortOrder = this.ASC;
+        this.currentSortOrder = ASC;
         this.currentPath = "";
         this.backButton = document.getElementById('back-button');
         this.homeButton = document.getElementById('home-button');
@@ -30,22 +30,25 @@ class Controller {
         this.sortByDateButton = document.getElementById('sort-button-date');
         this.statButtonTable = document.getElementById("stat-button-table");
         this.statButtonGraphic = document.getElementById("stat-button-graphic");
+        this.backToDirsButton = document.getElementById("stat-button-graphic-back");
         this.pathInput = document.getElementById('path');
         this.model = new Model();
         this.view = new View(this);
     }
     init() {
-        this.loadData(this.defaultSortField, this.defaultSortOrder, this.rootPath);
+        this.loadNodesData(this.defaultSortField, this.defaultSortOrder, this.rootPath);
         this.initEventListeners();
     }
-    loadData(sortField, sortOrder, path) {
+    // вызывает загрузку и обрабатывает данные о директориях
+    loadNodesData(sortField, sortOrder, path) {
         return __awaiter(this, void 0, void 0, function* () {
-            this.view.clearNodes();
+            this.view.removeNodes();
             this.view.showLoading();
+            this.view.hideError();
             try {
                 const data = yield this.model.fetchNodes(sortField, sortOrder, path);
                 this.view.hideLoading();
-                this.view.setLoadingTime(data.loadTime);
+                this.view.showLoadingTime(data.loadTime);
                 this.view.displayNodes(data.nodes);
                 if (path === '') {
                     this.calculateRootPath(data.nodes[0].path);
@@ -58,19 +61,21 @@ class Controller {
             }
         });
     }
+    // вызывает переход на страницу сервера Apache со статистикой загрузок данных
     loadStatsTable() {
         this.model.redirectToStat();
     }
-    loadStatsGraphic() {
+    // вызывает загрузку и обрабатывает данные о статистике загрузок данных (для дальнейшей отрисовки графика)
+    loadStatsGraphicData() {
         return __awaiter(this, void 0, void 0, function* () {
-            this.view.clearNodes();
-            this.view.showLoading();
+            // this.view.showLoading();
             try {
                 const data = yield this.model.fetchStats();
-                this.view.hideLoading();
-                console.log(data);
-                this.view.displayChart(data);
-                // this.view.setCurrentPathToInput(this.currentPath);
+                // this.view.hideLoading();
+                this.view.hideNodeSection();
+                this.view.createAndDisplayChart(data);
+                this.view.showBackButton();
+                this.view.hideGraphicButton();
             }
             catch (error) {
                 this.view.hideLoading();
@@ -78,16 +83,7 @@ class Controller {
             }
         });
     }
-    calculateRootPath(path) {
-        if (path[0] === '/') {
-            this.currentPath = this.rootPath = '/';
-            this.view.setCurrentPathToInput(this.currentPath);
-            return;
-        }
-        const pathArray = path.split('\\');
-        this.currentPath = this.rootPath = pathArray[0] + '/';
-        this.view.setCurrentPathToInput(this.currentPath);
-    }
+    // инициализация слушателей событий
     initEventListeners() {
         if (this.backButton) {
             this.backButton.addEventListener('click', () => this.handleBackButtonClick());
@@ -99,16 +95,16 @@ class Controller {
             this.pathInput.addEventListener('keyup', (event) => this.handlePathInputKeyPress(event));
         }
         if (this.sortByNameButton) {
-            this.sortByNameButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_NAME));
+            this.sortByNameButton.addEventListener('click', () => this.handleSortButtonClick(NODE_NAME));
         }
         if (this.sortByTypeButton) {
-            this.sortByTypeButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_TYPE));
+            this.sortByTypeButton.addEventListener('click', () => this.handleSortButtonClick(NODE_TYPE));
         }
         if (this.sortBySizeButton) {
-            this.sortBySizeButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_SIZE));
+            this.sortBySizeButton.addEventListener('click', () => this.handleSortButtonClick(NODE_SIZE));
         }
         if (this.sortByDateButton) {
-            this.sortByDateButton.addEventListener('click', () => this.handleSortButtonClick(this.NODE_EDITDATE));
+            this.sortByDateButton.addEventListener('click', () => this.handleSortButtonClick(NODE_EDITDATE));
         }
         if (this.statButtonTable) {
             this.statButtonTable.addEventListener('click', () => this.handleStatButtonTableClick());
@@ -116,32 +112,51 @@ class Controller {
         if (this.statButtonGraphic) {
             this.statButtonGraphic.addEventListener('click', () => this.handleStatButtonGraphicClick());
         }
+        if (this.backToDirsButton) {
+            this.backToDirsButton.addEventListener('click', () => this.handleStatButtonGraphicBackClick());
+        }
     }
+    // по нажатию на кнопку вызывает функцию перехода на страницу Apache
     handleStatButtonTableClick() {
         this.loadStatsTable();
     }
+    // по нажатию на кнопку вызывает функцию отображения директорий и удаления графика
+    handleStatButtonGraphicBackClick() {
+        this.loadNodesData(this.defaultSortField, this.currentSortOrder, this.currentPath);
+        this.view.destroyChartAndShowNodeSection();
+        this.view.hideBackButton();
+        this.view.showGraphicButton();
+    }
+    // по нажатию на кнопку вызывает функцию загрузки данных о статистике для отрисовки графика
     handleStatButtonGraphicClick() {
-        this.loadStatsGraphic();
+        this.loadStatsGraphicData();
     }
+    // по нажатию на кнопку вызывает функцию загрузки данных о директориях с учетом сотировкиs
     handleSortButtonClick(sortField) {
-        this.currentSortOrder === this.ASC ? (this.currentSortOrder = this.DESC) : (this.currentSortOrder = this.ASC);
-        this.loadData(sortField, this.currentSortOrder, this.currentPath);
+        this.currentSortOrder === ASC ? (this.currentSortOrder = DESC) : (this.currentSortOrder = ASC);
+        this.loadNodesData(sortField, this.currentSortOrder, this.currentPath);
     }
+    // по нажатию на кнопку обновляет текущий путь в зависимости от того, куда пользователь хочет перейти (на какой узел нажал),
+    // после чего вызывает функцию загрузки данных о директориях без учета сортировки
     handleNodeClick(node) {
         var _a;
         const dirName = ((_a = node.firstElementChild) === null || _a === void 0 ? void 0 : _a.textContent) || '';
         this.currentPath = this.currentPath[this.currentPath.length - 1] === "/" ? this.currentPath + dirName : `${this.currentPath}/${dirName}`;
         this.view.setCurrentPathToInput(this.currentPath);
-        this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
+        this.loadNodesData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
     }
+    // по нажатию на кнопку устанавливает текущий путь равным корневому
+    // и вызывает функцию загрузки данных о директориях без учета сортировки
     handleHomeButtonClick() {
         if (this.currentPath === this.rootPath) {
             return;
         }
         this.currentPath = this.rootPath;
         this.view.setCurrentPathToInput(this.currentPath);
-        this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
+        this.loadNodesData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
     }
+    // по нажатию на кнопку устанавливает текущий путь на уровень выше по вложенности (т.е. ближе к корневому),
+    // после чего вызывает функцию загрузки данных о директориях без учета сортировки
     handleBackButtonClick() {
         const pathArray = this.currentPath.split('/');
         if (this.currentPath.length <= 1 || (pathArray.length < 2 || pathArray[1] === '')) {
@@ -150,25 +165,35 @@ class Controller {
         else if (pathArray.length === 2) {
             this.currentPath = `${pathArray[0]}/`;
             this.view.setCurrentPathToInput(this.currentPath);
-            this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
+            this.loadNodesData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
             return;
         }
         else {
             pathArray.pop();
             this.currentPath = pathArray.join('/');
             this.view.setCurrentPathToInput(this.currentPath);
-            this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
+            this.loadNodesData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
         }
     }
+    // по нажатию на Enter устанавливает текущий путь равным введенному пользователем значению в input,
+    // после чего вызывает функцию загрузки данных о директориях без учета сортировки
     handlePathInputKeyPress(event) {
         if (event.key === 'Enter' && this.pathInput) {
             this.currentPath = this.pathInput.value;
             this.view.setCurrentPathToInput(this.currentPath);
-            this.loadData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
+            this.loadNodesData(this.defaultSortField, this.defaultSortOrder, this.currentPath);
         }
     }
-    handleAddButtonClick() {
-        // реализация обработчика нажатия кнопки "добавить"
+    // рассчет корневого пути по абсолютному
+    calculateRootPath(path) {
+        if (path[0] === '/') {
+            this.currentPath = this.rootPath = '/';
+            this.view.setCurrentPathToInput(this.currentPath);
+            return;
+        }
+        const pathArray = path.split('\\');
+        this.currentPath = this.rootPath = pathArray[0] + '/';
+        this.view.setCurrentPathToInput(this.currentPath);
     }
 }
 export default Controller;

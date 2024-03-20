@@ -24,8 +24,8 @@
             </section>
             <hr class="div-line">
             <section class="workspace-wrapper">
-                <div>
-                    <canvas id="chartWrapper"></canvas>
+                <div class="chart">
+                    <canvas class="chart__canvas" id="chart"></canvas>
                 </div>
                 <div class="workspace">
                     <div class="workspace__path-wrapper">
@@ -73,6 +73,7 @@
                 <div class="buttons">
                     <button id="stat-button-table" class="button">Статистика (таблица)</button>
                     <button id="stat-button-graphic" class="button">Статистика (график)</button>
+                    <button id="stat-button-graphic-back" class="button button-graphic-back">Назад</button>
                 </div>
             </section>
         </div>
@@ -87,8 +88,5 @@
         </div>
     </footer>
 </body>
-<script type="module" src="src/JSscripts/model.js"></script>
-<script type="module" src="src/JSscripts/script.js"></script>
-<script type="module" src="src/JSscripts/controller.js"></script>
-<script type="module" src="src/JSscripts/view.js"></script>
+<script type="module" src="../dist/main.bundle.js"></script>
 </html>

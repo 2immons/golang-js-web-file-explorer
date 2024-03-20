@@ -1,5 +1,5 @@
 import Controller from './controller.js';
-import Chart from '../../node_modules/chart.js/auto/auto.js';
+import Chart, { TimeScale } from 'chart.js/auto';
 
 type Nodes = {
     name: string;
@@ -18,58 +18,76 @@ type ChartData = {
 
 class View {
     private controller: Controller;
+    
     private nodeList: HTMLElement | null = document.querySelector('.node-list-section');
     private errorDiv: HTMLElement | null = document.querySelector('.error-data-not-found');
     private loadingDiv: HTMLElement | null = document.querySelector('.loading-data');
     private pathInput = document.getElementById('path') as HTMLInputElement;
-    private tableContainer = document.getElementById('table-container') as HTMLInputElement;
-    private chartWrapper: HTMLCanvasElement | null = document.getElementById('chart-wrapper') as HTMLCanvasElement | null;
+
+    private nodeSection: HTMLElement | null = document.querySelector('.workspace');
+    private statButtonGraphic: HTMLElement | null = document.getElementById("stat-button-graphic");
+    private backToDirsButton: HTMLElement | null = document.getElementById("stat-button-graphic-back");
+
+    private chartWrapper: HTMLElement | null = document.querySelector('.chart');
+    private chartCanvas: HTMLCanvasElement | null = document.getElementById('chart') as HTMLCanvasElement | null;
+    private chartItem: Chart | null = null;
 
     constructor(controller: Controller) {
         this.controller = controller;
     }
 
-    // clearNodes удаляет все пути из списка
-    clearNodes(): void {
-        if (this.nodeList) {
-            while (this.nodeList.firstChild) {
-                this.nodeList.removeChild(this.nodeList.firstChild);
-            }
-        }
-    }
+    // создание и отрисовка графика
+    createAndDisplayChart(data: ChartData[]): void { 
+        if (this.chartCanvas !== null){
+            // сортировка данных перед созданием графика
+            data.sort(this.compareLoadTime);
 
-    displayStatTable(data: string) {
-        if (this.tableContainer) {
-            this.tableContainer.innerHTML = data;
-        }
-    }
+            // извлечение значений времени и объема данных для графика
+            const loadTimesSeconds = data.map(row => row.load_time_seconds);
+            const totalSizesMb = data.map(row => row.total_size / 1024 / 1024); // получение примерного количества Мбайтов
 
-    displayChart(data: ChartData[]): void { 
-        if (this.chartWrapper !== null){
-            new Chart(this.chartWrapper, {
-                type: 'bar',
+            // создание графика с правильными метками и данными
+            this.chartItem = new Chart(this.chartCanvas, {
+                type: 'line',
                 data: {
-                    labels: data.map(row => row.load_time_seconds),
+                    labels: loadTimesSeconds,
                     datasets: [{
                         label: 'Объем данных',
-                        data: data.map(row => row.total_size),
+                        data: totalSizesMb,
                         borderWidth: 1
                     }]
                 },
                 options: {
-                scales: {
-                    y: {
-                    beginAtZero: true
+                    responsive: true,
+                    scales: {
+                        y: {
+                            title: {
+                                display: true,
+                                text: "Объем (Мб)"
+                            },
+                            beginAtZero: true,
+                            stacked: true
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: "Время (с)"
+                            }
+                        }
                     }
                 }
-                }
-            })
+            });
+
+            this.chartCanvas.style.display = "flex";
+            if (this.chartWrapper) {
+                this.chartWrapper.style.display = "flex";
+            }
         }
     }
 
     // displayNodes отрисовывает полученные с сервера пути в качестве потомков списка
     displayNodes(nodes: Nodes[]): void {
-        this.clearNodes();
+        this.removeNodes();
 
         if (this.nodeList) {
             nodes.forEach(node => {
@@ -108,40 +126,110 @@ class View {
         }
     }
 
-    setLoadingTime(time: number): void {
+    // метод для сравнения данных статистики по времени
+    compareLoadTime(a: ChartData, b: ChartData): number {
+        if ( a.load_time_seconds < b.load_time_seconds ){
+          return -1;
+        }
+        if ( a.load_time_seconds > b.load_time_seconds ){
+          return 1;
+        }
+        return 0;
+    }
+
+    // отображает время загрузки
+    showLoadingTime(time: number): void {
         const timeElement = document.querySelector('.time');
         if (timeElement) {
             timeElement.textContent = `Загружено за: ${time} секунд`;
         }
     }
 
-    showError(): void {
-        if (this.errorDiv) {
-            this.errorDiv.style.display = 'display';
+    // устанавливает текущий путь в интерфейс поля ввода пути
+    setCurrentPathToInput(path: string): void {
+        if (this.pathInput) {
+            this.pathInput.value = path;
         }
     }
 
+    // удалить созданный график, скрыть его и отобразить директории
+    destroyChartAndShowNodeSection(): void {
+        if (this.chartItem)
+            this.chartItem.destroy()
+        if (this.nodeSection && this.chartWrapper) {
+            this.chartWrapper.style.display = "none"
+            this.nodeSection.style.display = ""
+        }
+    }
+
+    // удаляет все пути из списка
+    removeNodes(): void {
+        if (this.nodeList) {
+            while (this.nodeList.firstChild) {
+                this.nodeList.removeChild(this.nodeList.firstChild);
+            }
+        }
+    }
+
+    // СОКРЫТИЕ, ПОЯВЛЕНИЕ ЭЛЕМЕНТОВ ПОЛЬЗОВАТЕЛЬСКОГО ИНТЕРФЕЙСА:
+
+    // сокрытие секции с директориями
+    hideNodeSection(): void {
+        if (this.nodeSection)
+            this.nodeSection.style.display = "none"
+    }
+
+    // появление кнопки возвращающей к директориям
+    showBackButton(): void {
+        if (this.backToDirsButton)
+            this.backToDirsButton.style.display = "inline-block"
+    }
+
+    // сокрытие кнопки возвращающей к директориям
+    hideBackButton(): void {
+        if (this.backToDirsButton) {
+            this.backToDirsButton.style.display = "none"
+        }
+    }
+
+    // появление кнопки включающей отображение графика
+    showGraphicButton(): void {
+        if (this.statButtonGraphic) {
+            this.statButtonGraphic.style.display = "inline-block"
+        }
+    }
+
+    // сокрытие кнопки включающей отображение графика
+    hideGraphicButton(): void {
+        if (this.statButtonGraphic)
+            this.statButtonGraphic.style.display = "none"
+    }
+
+    // появление ошибки загрузки
+    showError(): void {
+        if (this.errorDiv) {
+            this.errorDiv.style.display = 'flex';
+        }
+    }
+
+    // сокрытие ошибки загрузки
     hideError(): void {
         if (this.errorDiv) {
             this.errorDiv.style.display = 'none';
         }
     }
 
+    // появление сообщения "загрузка данных"
     showLoading(): void {
         if (this.loadingDiv) {
             this.loadingDiv.style.display = 'flex';
         }
     }
 
+    // сокрытие сообщения "загрузка данных"
     hideLoading(): void {
         if (this.loadingDiv) {
             this.loadingDiv.style.display = 'none';
-        }
-    }
-
-    setCurrentPathToInput(path: string): void {
-        if (this.pathInput) {
-            this.pathInput.value = path;
         }
     }
 }

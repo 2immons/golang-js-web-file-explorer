@@ -2,20 +2,8 @@
 try {
     // проверка, что пришел GET запрос
     if ($_SERVER["REQUEST_METHOD"] == "GET") {
-        // подключение к базе данных
-        $config_file = 'apacheServer.config.json';
-        $config_data = json_decode(file_get_contents($config_file), true);
-
-        $conn = new mysqli(
-            $config_data['database']['servername'],
-            $config_data['database']['username'], 
-            $config_data['database']['password'], 
-            $config_data['database']['dbname']);
-
-        // проверка соединения
-        if ($conn->connect_error) {
-            throw new Exception("Соединение не удалось: " . $conn->connect_error);
-        }
+        // файл с подключением к базе данных
+        require_once 'database_connection.php';
 
         // SQL запрос для выборки данных
         $sql = "SELECT id, total_size, date_time, root_path, load_time_seconds FROM stat";

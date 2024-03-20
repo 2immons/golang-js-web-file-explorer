@@ -174,11 +174,21 @@ table {
 
 .workspace-wrapper {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     height: 80%;
     padding: 10px;
     background-color: #eceff1;
+}
+
+.chart{
+    position: relative;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
 }
 
 .workspace {
@@ -389,6 +399,10 @@ table {
 
 .button:hover {
     background-color: #e0e0e0;
+}
+
+.button-graphic-back{
+    display: none;
 }
 
 .info-wrapper {

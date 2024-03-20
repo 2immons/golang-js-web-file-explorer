@@ -59,6 +59,7 @@ class Model {
             }
         });
     }
+    // перенаправление на страницу сервера Apache со статистикой загрузок данных
     redirectToStat() {
         const url = "http://localhost/statGet.php";
         window.location.href = url;

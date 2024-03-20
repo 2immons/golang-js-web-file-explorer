@@ -70,12 +70,10 @@ func main() {
 		Handler: http.DefaultServeMux,
 	}
 
-	// путь к style.css и .js файлам
 	http.Handle("/src/", http.StripPrefix("/src/", http.FileServer(http.Dir("./src"))))
 	http.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
 
-	// путь к index.html
-	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./public"))))
+	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./dist"))))
 
 	http.HandleFunc("/nodes", handleGetNodesRequest)
 
@@ -150,21 +148,23 @@ func handleGetNodesRequest(w http.ResponseWriter, r *http.Request) {
 
 	// получение отсортированного среза узлов файловой системы с информацией о них
 	// по заданному пути, полю сортировки и направлению
-	nodesSliceForJson, totalSize, err := fileprocessing.GetNodesSliceForJson(srcPath, sortField, sortOrder)
+	nodesSliceForJson, totalSize, err, srcPath := fileprocessing.GetNodesSliceForJson(srcPath, sortField, sortOrder)
 	if err != nil {
+		duration := float64(time.Since(startTime).Seconds())
+
 		w.WriteHeader(http.StatusOK)
+
 		response.ErrorText = fmt.Sprintf("Ошибка при создании сортированного среза данных: %v", err)
 		response.IsSucceed = false
-		duration := float64(time.Since(startTime).Seconds())
 		response.LoadTime = duration
 		response.Nodes = "No data"
 
 		responseJsonFormat, err := json.Marshal(response)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			// как тут показывать ошибку?
 			return
 		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(responseJsonFormat)
 		return
@@ -234,6 +234,7 @@ func sendStatsToServer(totalSize int64, loadTime float64, dateTime time.Time, sr
 	}
 	defer resp.Body.Close()
 
+	// чтение ответа от сервера и вывод в терминал
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return

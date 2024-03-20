@@ -2,16 +2,8 @@
 try {
     // проверка, что пришел POST запрос
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-        // подключение к базе данных
-        $config_file = 'apacheServer.config.json';
-        $config_data = json_decode(file_get_contents($config_file), true);
-
-        $conn = new mysqli(
-            $config_data['database']['servername'],
-            $config_data['database']['username'], 
-            $config_data['database']['password'], 
-            $config_data['database']['dbname']);
+        // файл с подключением к базе данных
+        require_once 'database_connection.php';
 
         // проверка соединения
         if ($conn->connect_error) {
