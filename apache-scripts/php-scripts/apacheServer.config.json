@@ -1,0 +1,8 @@
+{
+    "database": {
+        "servername": "localhost",
+        "username": "root",
+        "password": "Orig195025",
+        "dbname": "statDB"
+    }
+}

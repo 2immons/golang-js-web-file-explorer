@@ -4,12 +4,14 @@ try {
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // подключение к базе данных
-        $servername = "localhost";
-        $username = "root";
-        $password = "Orig195025";
-        $dbname = "statDB";
+        $config_file = 'apacheServer.config.json';
+        $config_data = json_decode(file_get_contents($config_file), true);
 
-        $conn = new mysqli($servername, $username, $password, $dbname);
+        $conn = new mysqli(
+            $config_data['database']['servername'],
+            $config_data['database']['username'], 
+            $config_data['database']['password'], 
+            $config_data['database']['dbname']);
 
         // проверка соединения
         if ($conn->connect_error) {

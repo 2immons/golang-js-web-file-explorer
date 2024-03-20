@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -121,6 +122,10 @@ func getRequestParams(r *http.Request) (string, string, string, error) {
 	srcPath := r.URL.Query().Get("path")
 	sortField := r.URL.Query().Get("sortField")
 	sortOrder := r.URL.Query().Get("sortOrder")
+	if sortField == "" || sortOrder == "" {
+		err := fmt.Errorf("переданы пустые параметры сортировки (поле и/или порядок)")
+		return "", "", "", err
+	}
 	return srcPath, sortField, sortOrder, nil
 }
 
@@ -229,9 +234,9 @@ func sendStatsToServer(totalSize int64, loadTime float64, dateTime time.Time, sr
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK {
-		fmt.Println(1)
-	} else if resp.StatusCode == 404 {
-		fmt.Println(2)
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return
 	}
+	fmt.Println(string(responseBody))
 }
