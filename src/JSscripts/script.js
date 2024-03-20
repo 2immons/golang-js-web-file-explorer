@@ -1,4 +1,5 @@
 // script.js
+import '../style.css';
 import Controller from './controller.js';
 import View from './view.js';
 const controller = new Controller();

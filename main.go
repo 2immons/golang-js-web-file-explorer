@@ -70,9 +70,7 @@ func main() {
 		Handler: http.DefaultServeMux,
 	}
 
-	http.Handle("/src/", http.StripPrefix("/src/", http.FileServer(http.Dir("./src"))))
 	http.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
-
 	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("./dist"))))
 
 	http.HandleFunc("/nodes", handleGetNodesRequest)

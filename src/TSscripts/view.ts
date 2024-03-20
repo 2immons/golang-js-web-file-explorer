@@ -18,7 +18,7 @@ type ChartData = {
 
 class View {
     private controller: Controller;
-    
+
     private nodeList: HTMLElement | null = document.querySelector('.node-list-section');
     private errorDiv: HTMLElement | null = document.querySelector('.error-data-not-found');
     private loadingDiv: HTMLElement | null = document.querySelector('.loading-data');
@@ -95,7 +95,7 @@ class View {
                 newNode.classList.add('node-list__item');
 
                 // если узел является папкой, добавление соответствующего класса и кликабельности для него
-                if (node.type === "Папка" && newNode) {
+                if (node.type === "Каталог" && newNode) {
                     newNode.classList.add('node-list__item_folder');
                     newNode.addEventListener("click", () => this.controller.handleNodeClick(newNode));
                 }

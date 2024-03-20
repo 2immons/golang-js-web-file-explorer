@@ -105,9 +105,9 @@ func createConvertedPathsSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
 
 	for i, value := range pathsSlice {
 		// если имя вхождения пустое, присвоение строк с сообщением об ошибке доступа
-		if value.Name == "" {
+		if value.Path == "" {
 			pathsSliceForJson[i] = nodeItemForJson{
-				Name:     "Ошибка доступа",
+				Name:     value.Name,
 				Path:     "Ошибка доступа",
 				ItemSize: "Ошибка доступа",
 				IsDir:    "Ошибка доступа",
@@ -119,7 +119,7 @@ func createConvertedPathsSliceForJson(pathsSlice []nodeItem) []nodeItemForJson {
 		// замена bool на сооветствующее string элементов pathsSlice
 		isDirValue := "Файл"
 		if value.IsDir {
-			isDirValue = "Папка"
+			isDirValue = "Каталог"
 		}
 
 		// присвоение значений новому срезу

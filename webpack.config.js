@@ -8,10 +8,10 @@ const __dirname = path.dirname(__filename);
 export default {
     mode: "development",
     entry: {
-        main: './src/JSscripts/script.js',
+        main: path.join(__dirname, "src", "JSscripts", "script.js")
     },
     output: {
-        filename: '[name].bundle.js',
+        filename: '[hash].bundle.js',
         path: path.resolve(__dirname, 'dist'),
     },
     module: {
@@ -24,7 +24,7 @@ export default {
     },
     plugins: [
         new HtmlWebpackPlugin({
-            template: './public/index.html',
+            template: path.join(__dirname, "public", "index.html")
         }),
     ]
 };

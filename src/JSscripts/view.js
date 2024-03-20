@@ -66,7 +66,7 @@ class View {
                 let newNode = document.createElement('div');
                 newNode.classList.add('node-list__item');
                 // если узел является папкой, добавление соответствующего класса и кликабельности для него
-                if (node.type === "Папка" && newNode) {
+                if (node.type === "Каталог" && newNode) {
                     newNode.classList.add('node-list__item_folder');
                     newNode.addEventListener("click", () => this.controller.handleNodeClick(newNode));
                 }
