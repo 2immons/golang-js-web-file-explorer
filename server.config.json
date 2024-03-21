@@ -1,0 +1,6 @@
+{
+    "port":"8324",
+    "apachePostURL": "http://localhost:80/statPost.php",
+    "apacheGraphicURL": "http://localhost:80/statGetGraphic.php",
+    "apacheTableURL": "http://localhost:80/statGet.php"
+}

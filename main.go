@@ -13,11 +13,11 @@ import (
 	"time"
 )
 
-const configFilePath string = "server/server.config.json" // путь к файлу конфигураци
+const configFilePath string = "server.config.json" // путь к файлу конфигураци
 
 type ServerConfig struct {
-	Port      string `json:"port"`      // порт сервера
-	ApacheURL string `json:"apacheURL"` // адрес сервера Apache
+	Port          string `json:"port"`          // порт сервера
+	ApachePostURL string `json:"apachePostURL"` // адрес сервера Apache
 }
 
 type NodesGetResponseStruct struct {
@@ -215,7 +215,7 @@ func sendStatsToServer(totalSize int64, loadTime float64, dateTime time.Time, sr
 	client := &http.Client{}
 
 	// отправка запроса
-	req, err := http.NewRequest("POST", serverConfig.ApacheURL, bytes.NewBuffer(jsonRequestData))
+	req, err := http.NewRequest("POST", serverConfig.ApachePostURL, bytes.NewBuffer(jsonRequestData))
 	if err != nil {
 		return
 	}

@@ -231,7 +231,11 @@ table {
     justify-content: space-around;
     width: 220px;
     height: 100%;
+    min-height: 28px;
+    margin-top: 1px;
+    margin-bottom: 1px;
     align-items: center;
+    border: 1px solid #ccc;
 }
 
 .path-button {
@@ -272,6 +276,7 @@ table {
 
 .table-section__header-col {
     display: flex;
+    background: #ccc;
     justify-content: left;
     align-items: center;
     height: 100%;
@@ -290,11 +295,12 @@ table {
     border: none;
     cursor: pointer;
     font-weight: 600;
+    background-color: #e9e9e9;
     transition: background-color 0.3s ease;
 }
 
 .sort-button:hover {
-    background-color: #e0e0e0
+    background-color: #ccc
 }
 
 .node-list-section {

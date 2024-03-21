@@ -71,10 +71,12 @@ class Controller {
 
     // вызывает загрузку и обрабатывает данные о статистике загрузок данных (для дальнейшей отрисовки графика)
     async loadStatsGraphicData() {
-        // this.view.showLoading();
+        this.view.removeNodes();
+        this.view.showLoading();
+        this.view.hideError();
         try {
             const data = await this.model.fetchStats();
-            // this.view.hideLoading();
+            this.view.hideLoading();
             this.view.hideNodeSection();
             this.view.createAndDisplayChart(data);
             this.view.showBackButton();
