@@ -1,8 +1,10 @@
 import Model from './model';
 import View from './view';
 
-const ASC: string = 'asc';
-const DESC: string = 'desc';
+enum SortOrder {
+    ASC = 'asc',
+    DESC = 'desc'
+}
 
 const NODE_NAME: string = 'name';
 const NODE_TYPE: string = 'type';
@@ -13,11 +15,11 @@ class Controller {
     private model: Model;
     private view: View;
 
-    private defaultSortOrder: string = ASC;
+    private defaultSortOrder: string = SortOrder.ASC;
     private defaultSortField: string = NODE_SIZE;
     private rootPath: string = "";
 
-    private currentSortOrder: string = ASC;
+    private currentSortOrder: string = SortOrder.ASC;
     private currentPath: string = "";
 
     private backButton: HTMLElement | null = document.getElementById('back-button');
@@ -51,7 +53,6 @@ class Controller {
         this.view.hideError();
         try {
             const data = await this.model.fetchNodes(sortField, sortOrder, path);
-            this.view.hideLoading();
             this.view.showLoadingTime(data.loadTime);
             this.view.displayNodes(data.nodes);
             if (path === '') {
@@ -59,8 +60,9 @@ class Controller {
             }
             this.view.setCurrentPathToInput(this.currentPath);
         } catch (error) {
-            this.view.hideLoading();
             this.view.showError();
+        } finally {
+            this.view.hideLoading();
         }
     }
 
@@ -76,14 +78,14 @@ class Controller {
         this.view.hideError();
         try {
             const data = await this.model.fetchStats();
-            this.view.hideLoading();
             this.view.hideNodeSection();
             this.view.createAndDisplayChart(data);
             this.view.showBackButton();
             this.view.hideGraphicButton();
         } catch (error) {
-            this.view.hideLoading();
             this.view.showError();
+        } finally {
+            this.view.hideLoading();
         }
     }
 
@@ -143,7 +145,7 @@ class Controller {
 
     // по нажатию на кнопку вызывает функцию загрузки данных о директориях с учетом сотировкиs
     handleSortButtonClick(sortField: string): void {
-        this.currentSortOrder === ASC ? (this.currentSortOrder = DESC) : (this.currentSortOrder = ASC);
+        this.currentSortOrder === SortOrder.ASC ? (this.currentSortOrder = SortOrder.DESC) : (this.currentSortOrder = SortOrder.ASC);
         this.loadNodesData(sortField, this.currentSortOrder, this.currentPath);
     }
 

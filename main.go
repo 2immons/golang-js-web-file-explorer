@@ -17,7 +17,8 @@ const configFilePath string = "server.config.json" // путь к файлу к�
 
 type ServerConfig struct {
 	Port          string `json:"port"`          // порт сервера
-	ApachePostURL string `json:"apachePostURL"` // адрес сервера Apache
+	ApachePostURL string `json:"apachePostURL"` // адрес запроса Apache
+	ApacheURL     string `json:"apacheURL"`     // адрес Apache
 }
 
 type NodesGetResponseStruct struct {
@@ -214,8 +215,10 @@ func sendStatsToServer(totalSize int64, loadTime float64, dateTime time.Time, sr
 
 	client := &http.Client{}
 
+	apacheServerReqAdrr := serverConfig.ApacheURL + serverConfig.ApachePostURL
+
 	// отправка запроса
-	req, err := http.NewRequest("POST", serverConfig.ApachePostURL, bytes.NewBuffer(jsonRequestData))
+	req, err := http.NewRequest("POST", apacheServerReqAdrr, bytes.NewBuffer(jsonRequestData))
 	if err != nil {
 		return
 	}

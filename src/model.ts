@@ -34,7 +34,7 @@ class Model {
 
     // fetchStats получает данные с сервера Apache о статистике: зависимость времени загрузки от объема
     async fetchStats(): Promise<any> {
-        const url = configFile.apacheGraphicURL
+        const url =  configFile.apacheURL + configFile.apacheGraphicURL
         try {
             const response = await fetch(url, {
                 method: 'GET',
@@ -59,7 +59,7 @@ class Model {
 
     // перенаправление на страницу сервера Apache со статистикой загрузок данных
     redirectToStat() {
-        const url = configFile.apacheTableURL
+        const url = configFile.apacheURL + configFile.apacheTableURL
         window.location.href = url
     }
 }

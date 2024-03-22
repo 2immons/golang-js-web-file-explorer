@@ -44,17 +44,19 @@ class View {
 
             // извлечение значений времени и объема данных для графика
             const loadTimesSeconds = data.map(row => row.load_time_seconds);
-            const totalSizesMb = data.map(row => row.total_size / 1024 / 1024); // получение примерного количества Мбайтов
+            const totalSizesMb = data.map(row => Math.round(row.total_size / 1024 / 1024)); // получение примерного количества Мбайтов и округление до целых
 
             // создание графика с правильными метками и данными
             this.chartItem = new Chart(this.chartCanvas, {
                 type: 'line',
                 data: {
-                    labels: loadTimesSeconds,
+                    labels: totalSizesMb,
                     datasets: [{
                         label: 'Объем данных',
-                        data: totalSizesMb,
-                        borderWidth: 1
+                        data: loadTimesSeconds,
+                        borderWidth: 1,
+                        tension: 0.8,
+                        pointRadius: 2
                     }]
                 },
                 options: {
@@ -63,7 +65,7 @@ class View {
                         y: {
                             title: {
                                 display: true,
-                                text: "Объем (Мб)"
+                                text: "Время (с)"
                             },
                             beginAtZero: true,
                             stacked: true
@@ -71,7 +73,7 @@ class View {
                         x: {
                             title: {
                                 display: true,
-                                text: "Время (с)"
+                                text: "Объем (Мб)"
                             }
                         }
                     }

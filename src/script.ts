@@ -5,4 +5,8 @@ import View from './view';
 
 const controller = new Controller();
 const view = new View(controller);
-controller.init();
+
+document.addEventListener("DOMContentLoaded", function() {
+    controller.init();
+});
+
