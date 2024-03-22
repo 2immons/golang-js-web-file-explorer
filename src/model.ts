@@ -1,3 +1,6 @@
+
+import configFile from '../server.config.json';
+
 class Model {
     constructor() {}
 
@@ -31,7 +34,7 @@ class Model {
 
     // fetchStats получает данные с сервера Apache о статистике: зависимость времени загрузки от объема
     async fetchStats(): Promise<any> {
-        const url = `http://localhost:80/statGetGraphic.php`
+        const url = configFile.apacheGraphicURL
         try {
             const response = await fetch(url, {
                 method: 'GET',
@@ -56,7 +59,7 @@ class Model {
 
     // перенаправление на страницу сервера Apache со статистикой загрузок данных
     redirectToStat() {
-        const url = "http://localhost/statGet.php"
+        const url = configFile.apacheTableURL
         window.location.href = url
     }
 }
