@@ -92,38 +92,39 @@ class Controller {
     // инициализация слушателей событий
     initEventListeners(): void {
         if (this.backButton) {
-            this.backButton.addEventListener('click', () => this.handleBackButtonClick());
+            this.backButton.addEventListener('click', this.handleBackButtonClick.bind(this));
         }
         if (this.homeButton) {
-            this.homeButton.addEventListener('click', () => this.handleHomeButtonClick());
+            this.homeButton.addEventListener('click', this.handleHomeButtonClick.bind(this));
         }
         if (this.pathInput) {
-            this.pathInput.addEventListener('keyup', (event) => this.handlePathInputKeyPress(event));
+            this.pathInput.addEventListener('keyup', this.handlePathInputKeyPress.bind(this));
         }
-
+    
         if (this.sortByNameButton) {
-            this.sortByNameButton.addEventListener('click', () => this.handleSortButtonClick(NODE_NAME));
+            this.sortByNameButton.addEventListener('click', this.handleSortButtonClick.bind(this, NODE_NAME));
         }
         if (this.sortByTypeButton) {
-            this.sortByTypeButton.addEventListener('click', () => this.handleSortButtonClick(NODE_TYPE));
+            this.sortByTypeButton.addEventListener('click', this.handleSortButtonClick.bind(this, NODE_TYPE));
         }
         if (this.sortBySizeButton) {
-            this.sortBySizeButton.addEventListener('click', () => this.handleSortButtonClick(NODE_SIZE));
+            this.sortBySizeButton.addEventListener('click', this.handleSortButtonClick.bind(this, NODE_SIZE));
         }
         if (this.sortByDateButton) {
-            this.sortByDateButton.addEventListener('click', () => this.handleSortButtonClick(NODE_EDITDATE));
+            this.sortByDateButton.addEventListener('click', this.handleSortButtonClick.bind(this, NODE_EDITDATE));
         }
-
+    
         if (this.statButtonTable) {
-            this.statButtonTable.addEventListener('click', () => this.handleStatButtonTableClick());
+            this.statButtonTable.addEventListener('click', this.handleStatButtonTableClick.bind(this));
         }
         if (this.statButtonGraphic) {
-            this.statButtonGraphic.addEventListener('click', () => this.handleStatButtonGraphicClick());
+            this.statButtonGraphic.addEventListener('click', this.handleStatButtonGraphicClick.bind(this));
         }
         if (this.backToDirsButton) {
-            this.backToDirsButton.addEventListener('click', () => this.handleStatButtonGraphicBackClick());
+            this.backToDirsButton.addEventListener('click', this.handleStatButtonGraphicBackClick.bind(this));
         }
     }
+    
 
     // по нажатию на кнопку вызывает функцию перехода на страницу Apache
     handleStatButtonTableClick(): void {
