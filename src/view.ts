@@ -39,12 +39,14 @@ class View {
     // создание и отрисовка графика
     createAndDisplayChart(data: ChartData[]): void { 
         if (this.chartCanvas !== null){
-            // сортировка данных перед созданием графика
-            data.sort(this.compareLoadTime);
+            // сортировка данных по размеру перед созданием графика
+            console.log(data)
+            data.sort(this.compareTotalSize);
+            console.log(data)
 
             // извлечение значений времени и объема данных для графика
             const loadTimesSeconds = data.map(row => row.load_time_seconds);
-            const totalSizesMb = data.map(row => Math.round(row.total_size / 1024 / 1024)); // получение примерного количества Мбайтов и округление до целых
+            const totalSizesMb = data.map(row => Math.round(row.total_size/1024/1024)); // получение примерного количества Мбайтов и округление до целых
 
             // создание графика с правильными метками и данными
             this.chartItem = new Chart(this.chartCanvas, {
@@ -52,7 +54,7 @@ class View {
                 data: {
                     labels: totalSizesMb,
                     datasets: [{
-                        label: 'Объем данных',
+                        label: 'Время в секундах',
                         data: loadTimesSeconds,
                         borderWidth: 1,
                         tension: 0.8,
@@ -68,12 +70,15 @@ class View {
                                 text: "Время (с)"
                             },
                             beginAtZero: true,
-                            stacked: true
+                            stacked: true,
                         },
                         x: {
                             title: {
                                 display: true,
                                 text: "Объем (Мб)"
+                            },
+                            ticks: {
+                                maxTicksLimit: 10
                             }
                         }
                     }
@@ -128,12 +133,12 @@ class View {
         }
     }
 
-    // метод для сравнения данных статистики по времени
-    compareLoadTime(a: ChartData, b: ChartData): number {
-        if ( a.load_time_seconds < b.load_time_seconds ){
+    // метод для сравнения данных статистики по размеру
+    compareTotalSize(a: ChartData, b: ChartData): number {
+        if ( a.total_size > b.total_size ){
           return -1;
         }
-        if ( a.load_time_seconds > b.load_time_seconds ){
+        if ( a.total_size < b.total_size ){
           return 1;
         }
         return 0;
