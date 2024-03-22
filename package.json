@@ -12,7 +12,8 @@
     "webpack-dev-server": "5.0.3"
   },
   "scripts": {
-    "build": "webpack --config webpack.config.сjs"
+    "build": "webpack --config webpack.config.сjs",
+    "dev": "concurrently \"go run .\" \"webpack --watch --config webpack.config.сjs\""
   },
   "dependencies": {
     "chart.js": "4.4.2",
