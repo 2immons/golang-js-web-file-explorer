@@ -1,1 +1,1 @@
-# rbs-task-3
+# Golang + JS Web File Explorer
